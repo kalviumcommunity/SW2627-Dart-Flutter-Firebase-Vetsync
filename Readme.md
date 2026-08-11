@@ -1,8 +1,8 @@
 # VetConnect — Unified Pet Health Records System
 
-A [Next.js / your stack] application that gives veterinary clinics shared access to a pet's vaccination history and treatment notes across all branches, flags potential duplicate medications, and helps vets stay on top of follow-ups — no matter which branch a pet is seen at.
+A Dart, Flutter, Firebase application that gives veterinary clinics shared access to a pet's vaccination history and treatment notes across all branches, flags potential duplicate medications, and helps vets stay on top of follow-ups — no matter which branch a pet is seen at.
 
-Built by team **[Your Team Name]** for [Sprint/Project Name]. Full requirements in [`docs/PRD.md`](docs/PRD.md).
+Built by team Pioneers for Sprint 2. Full requirements in [`docs/PRD.md`](docs/PRD.md).
 
 ---
 
@@ -25,18 +25,17 @@ VetConnect centralizes every pet's medical records into a single system accessib
 
 ## Tech Stack
 
-- **Frontend:** [Next.js / React / your framework]
-- **Backend:** [Node.js / Express / your framework]
-- **Database:** [PostgreSQL / MongoDB / your DB]
-- **Auth:** [NextAuth / JWT / your solution]
-- **Deployment:** [Vercel / Render / your host]
+- **Frontend:** Flutter, Dart
+- **Backend:** Firebase
+- **Database:** Firebase
+- **Deployment:** 
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js (v18+)
-- [Database] running locally or a connection string
+- Firebase running locally or a connection string
 
 ### Installation
 
@@ -58,3 +57,14 @@ npm run dev
 Visit `http://localhost:3000` to view the app.
 
 ## Project Structure
+
+
+ ---
+
+ ## Team
+
+| Name    | Role   |
+|---------|--------|
+| Nirbhay | [Role] |
+| Satvik  | [Role] |
+| Somya   | [Role] |
