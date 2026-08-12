@@ -63,7 +63,7 @@ Visit `http://localhost:3000` to view the app.
 
  ## Team
 
-| Name    | Role   |
+| Name    |S135-Pioneers|
 |---------|--------|
 | Nirbhay | [Role] |
 | Satvik  | [Role] |
