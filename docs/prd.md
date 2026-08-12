@@ -5,7 +5,7 @@ VetRecords
 Version: 1.0
 Project: Mobile App Development (Sprint 2)
 Duration: 25 Working Days (5 Weeks)
-Team Size: [Fill in]
+Team Size: [3]
 
 ## Table of Contents
 
