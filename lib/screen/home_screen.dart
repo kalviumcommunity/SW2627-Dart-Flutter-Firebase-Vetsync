@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class HomeScreen extends StatelessWidget {
 
   const HomeScreen({super.key});
@@ -36,7 +37,9 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            ElevatedButton(onPressed: () {} , child: const Text('View Pets')),
+            ElevatedButton(
+              onPressed: () {} ,
+              child: const Text('View Pets')),
 
           ],
         ),
