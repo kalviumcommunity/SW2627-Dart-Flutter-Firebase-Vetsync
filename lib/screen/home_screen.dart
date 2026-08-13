@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vetsync/screen/pets_screen.dart';
 
+
 class HomeScreen extends StatelessWidget {
 
   const HomeScreen({super.key});
@@ -41,9 +42,9 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const PetsScreen())
+                  MaterialPageRoute(builder: (context) => const PetsScreen()),
                 );
-              } ,
+              },
               child: const Text('View Pets')),
 
           ],
