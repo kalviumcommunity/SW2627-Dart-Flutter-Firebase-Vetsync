@@ -30,31 +30,6 @@ VetConnect centralizes every pet's medical records into a single system accessib
 - **Database:** Firebase
 - **Deployment:** 
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18+)
-- Firebase running locally or a connection string
-
-### Installation
-
-```bash
-# Clone the repo
-git clone <repository-url>
-cd vetconnect
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-
-# Run the development server
-npm run dev
-```
-
-Visit `http://localhost:3000` to view the app.
 
 ## Project Structure
 
