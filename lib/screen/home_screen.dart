@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vetsync/screen/pets_screen.dart';
 
 class HomeScreen extends StatelessWidget {
 
@@ -36,7 +37,14 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            ElevatedButton(onPressed: () {} , child: const Text('View Pets')),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PetsScreen())
+                );
+              } ,
+              child: const Text('View Pets')),
 
           ],
         ),
@@ -46,4 +54,3 @@ class HomeScreen extends StatelessWidget {
   }
 
 }
-
