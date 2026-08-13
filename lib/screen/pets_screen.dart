@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vetsync/models/pet.dart';
 
 class PetsScreen extends StatelessWidget {
 
@@ -7,19 +8,42 @@ class PetsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
+      final List<Pet> pets = [
+        const Pet(
+          id: "pet001", 
+          name: "Bruno", 
+          species: "Dog", 
+          breed: "Golden Retriver", 
+          age: 3
+        ),
+        const Pet(
+          id: "pet002", 
+          name: "Milo", 
+          species: "Cat", 
+          breed: "Persian", 
+          age: 2
+        ),
+        const Pet(
+          id: "pet003", 
+          name: "Tommy", 
+          species: "Dog", 
+          breed: "Labrador", 
+          age: 5
+        ),
+      ];
+
+
       return Scaffold(
         appBar: AppBar(
-          title: Text("My Pets"),
+          title: const Text("My Pets"),
         ),
-
-        body: const Center(
-          child : Text(
-            'Pets will  appear here',
+        body: Center(
+          child: Text(
+            'Total Pets: ${pets.length}',
             style: TextStyle(
-              fontSize: 24,
-            ),
-          )
-
+              fontSize: 24
+            ), 
+          ),
         ),
       );
   }
