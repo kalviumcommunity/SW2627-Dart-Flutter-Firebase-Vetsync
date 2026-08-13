@@ -30,20 +30,63 @@ class PetsScreen extends StatelessWidget {
           breed: "Labrador", 
           age: 5
         ),
+        const Pet(
+          id: "pet004", 
+          name: "Tetee", 
+          species: "Cat", 
+          breed: "Lesbian", 
+          age: 1
+        ),
+        const Pet(
+          id: "pet005", 
+          name: "Heraaa Beta", 
+          species: "Dog", 
+          breed: "Gay", 
+          age: 9
+        ),
+        
       ];
 
 
       return Scaffold(
         appBar: AppBar(
-          title: const Text("My Pets"),
+          title: Text("My Pets"),
         ),
-        body: Center(
-          child: Text(
-            'Total Pets: ${pets.length}',
-            style: TextStyle(
-              fontSize: 24
-            ), 
-          ),
+
+        body : ListView.builder(
+          itemCount: pets.length,
+
+          itemBuilder: (context, index) {
+            final Pet pet = pets[index];
+
+            return Card(
+              margin : const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8
+              ),
+
+              child : ListTile(
+
+                leading: const Icon(
+                  Icons.pets,
+                  size: 32,
+                ),
+
+                title: Text(
+                  pet.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                subtitle: Text(
+                  '${pet.breed} • Species : ${pet.species}  • Age: ${pet.age}',
+                ),
+
+              )
+            );
+
+          }
         ),
       );
   }
