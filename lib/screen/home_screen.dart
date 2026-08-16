@@ -19,7 +19,7 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'Welcome Users to Vetsync!🧿',
+              'Welcome Users to Vetync!🧿',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
