@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vetsync/screen/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -103,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextButton(
                 onPressed: (){
                   Navigator.push(context, 
-                    MaterialPageRoute(builder: (context) => const SignupScreen),
+                    MaterialPageRoute(builder: (context) => const SignupScreen()),
                   );
                 },
                 child: const Text("Dont have a account? Sign up"),
