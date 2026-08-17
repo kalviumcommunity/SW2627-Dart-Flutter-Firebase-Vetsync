@@ -97,6 +97,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text('Login'),
                 ),
               ),
+
+              const SizedBox(height:16),
+
+              TextButton(
+                onPressed: (){
+                  Navigator.push(context, 
+                    MaterialPageRoute(builder: (context) => const SignupScreen),
+                  );
+                },
+                child: const Text("Dont have a account? Sign up"),
+              ),
             ],
           ),
         ),
