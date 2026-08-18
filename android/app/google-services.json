@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1008258013681",
+    "project_id": "vetsync-a6216",
+    "storage_bucket": "vetsync-a6216.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008258013681:android:3ff84802da5797bfa90c50",
+        "android_client_info": {
+          "package_name": "com.example.vetsync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJ0-1BFTER8-1PUYwBXjW-3mBpEK2_zto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
