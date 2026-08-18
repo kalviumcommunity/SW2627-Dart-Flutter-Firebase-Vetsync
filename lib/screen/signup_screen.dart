@@ -4,11 +4,11 @@ class SignupScreen extends StatefulWidget{
   const SignupScreen({super.key});
 
   @override
-  State<StatefulWidget> createState() => __SignupScreenState();
+  State<StatefulWidget> createState() => _SignupScreenState();
 
 }
 
-class __SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends State<SignupScreen> {
 
   final _formKey = GlobalKey<FormState>();
 
@@ -41,8 +41,6 @@ class __SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     
     return Scaffold(
-
-      backgroundColor: Colors.blueGrey.shade50,
       appBar: AppBar(
         title: const Text('Signup'),
       ),
@@ -83,7 +81,7 @@ class __SignupScreenState extends State<SignupScreen> {
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
@@ -100,7 +98,7 @@ class __SignupScreenState extends State<SignupScreen> {
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder()
                 ),
@@ -118,7 +116,7 @@ class __SignupScreenState extends State<SignupScreen> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Confirm Password',
                   border: OutlineInputBorder()
                 ),
