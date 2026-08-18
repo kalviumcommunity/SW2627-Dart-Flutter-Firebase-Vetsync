@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:vetsync/screen/signup_screen.dart';
+import 'package:vetsync/screen/login_screen.dart';
+// import 'package:vetsync/screen/signup_screen.dart';
 // import 'package:vetsync/screen/home_screen.dart';
 // import 'package:vetsync/screen/login_screen.dart';
 
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'VetSync',
-      home: SignupScreen(),
+      home: LoginScreen(),
     );
   }
 }

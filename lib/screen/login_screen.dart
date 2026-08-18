@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vetsync/screen/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,8 +34,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-      backgroundColor: Colors.blueGrey.shade50,
       appBar: AppBar(
         title: const Text('Login'),
       ),
@@ -98,6 +97,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _login,
                   child: const Text('Login'),
                 ),
+              ),
+
+              const SizedBox(height:16),
+
+              TextButton(
+                onPressed: (){
+                  Navigator.push(context, 
+                    MaterialPageRoute(builder: (context) => const SignupScreen()),
+                  );
+                },
+                child: const Text("Dont have a account? Sign up"),
               ),
             ],
           ),
