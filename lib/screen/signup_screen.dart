@@ -141,6 +141,17 @@ class __SignupScreenState extends State<SignupScreen> {
                 ),
               ),
 
+              const SizedBox(height: 16),
+
+              TextButton(
+                onPressed: (){
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'Already have a account? Login',
+                ),
+              )
+
             ],
           ),
         )

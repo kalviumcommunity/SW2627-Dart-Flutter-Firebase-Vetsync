@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vetsync/screen/signup_screen.dart';
+import 'package:vetsync/screen/signup_screen.dart';z
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
