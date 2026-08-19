@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignupScreen extends StatefulWidget{
@@ -9,6 +10,8 @@ class SignupScreen extends StatefulWidget{
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -29,11 +32,16 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _signup(){
+  Future<void> _signup() async{
     if(_formKey.currentState!.validate()){
-      print('Name: ${_nameController.text}');
-      print('Email: ${_emailController.text}');
-      print("Signup Successfully");
+      
+      await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text, 
+        password: _passwordController.text
+      );
+
+      print("signup successfully");
+
     }
   }
 
