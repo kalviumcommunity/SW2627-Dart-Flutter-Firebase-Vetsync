@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:vetsync/screen/home_screen.dart';
 import 'package:vetsync/screen/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -9,6 +11,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _emailController =
@@ -24,11 +29,22 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void>  _login() async {
     if (_formKey.currentState!.validate()) {
-      print('Email: ${_emailController.text}');
-      print('Password: ${_passwordController.text}');
-    }
+      
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text, 
+        password: _passwordController.text
+      );
+
+      print("Login Successfully");
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen())
+      );
+
+    } 
   }
 
   @override
