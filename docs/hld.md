@@ -1,62 +1,215 @@
-# High-Level Design (HLD) - VetRecords
+# VetSync — High-Level Design (HLD)
 
-## 1. Introduction
-This document provides the high-level architecture and design for the VetRecords mobile application. VetRecords is a cross-branch pet medical record platform built using Flutter and Firebase, designed to centralize veterinary records and improve the visibility of pet medical histories across multiple clinic branches.
+## 1. Project Overview
 
-## 2. System Architecture
-VetRecords follows a standard 2-tier client-server architecture using Firebase as a backend-as-a-service (BaaS).
+VetSync is a centralized veterinary health-record mobile application designed for veterinary clinic chains operating across multiple branches.
 
-- **Client Tier:** Flutter mobile application (Android/iOS). Handles UI, local state management, and user interactions.
-- **Data Tier:** Firebase Services (Authentication, Firestore Database). Handles identity, persistence, and real-time data synchronization.
+Currently, each clinic branch may maintain its own vaccination history and treatment records. When a pet visits another branch, the attending veterinarian may not have access to the pet's previous medical history.
 
-### 2.1 Architecture Diagram
+VetSync solves this problem by providing a centralized system where authorized veterinary staff can access and manage a pet's medical records across clinic branches.
 
-```mermaid
-graph TD
-    Client[Flutter Mobile App]
-    Auth[Firebase Authentication]
-    DB[(Cloud Firestore)]
-    
-    Client -- Authenticates Vet --> Auth
-    Auth -- Returns Session --> Client
-    Client -- Reads/Writes Pet Data --> DB
-    DB -- Real-time Updates --> Client
-```
+---
 
-## 3. Data Flow
-1. **Authentication:** The Vet logs in via Firebase Authentication using email and password.
-2. **Search:** The App sends a query to Firestore to find a pet by name, owner, or ID.
-3. **Retrieval:** Firestore returns the matching pet documents.
-4. **Detail View:** When a pet is selected, the app subscribes to a real-time stream of the `visits` collection for that specific `petId`.
-5. **Data Creation:** When a Vet adds a new visit, the app writes a new document to the `visits` collection, appending the `branchId` and `vetId`.
-6. **Sync:** Since the app is listening to the `visits` stream, the new visit is immediately reflected on all connected clients.
+# 2. Problem Statement
 
-## 4. Technology Stack
-- **Frontend:** Flutter (Dart)
-- **Backend & Database:** Firebase Cloud Firestore (NoSQL)
-- **Authentication:** Firebase Authentication
+A chain of veterinary clinics operates across multiple branches, but each clinic maintains its own records for vaccination history and treatment notes.
 
-## 5. Database Schema (Firestore)
-The database relies on a NoSQL document model.
+When a pet owner visits a different branch, the attending vet has no access to prior history, increasing the risk of:
 
-- **`pets` Collection:** Core pet information.
-  - `petId` (String), `name` (String), `species` (String), `breed` (String), `ownerName` (String), `dob` (Timestamp)
-- **`visits` Collection:** Medical history and visit logs.
-  - `visitId` (String), `petId` (String), `branchId` (String), `vetId` (String), `date` (Timestamp), `notes` (String), `medications` (Array of Strings), `vaccination` (String), `nextFollowUpDate` (Timestamp)
-- **`branches` Collection:** Clinic locations.
-  - `branchId` (String), `name` (String), `location` (String)
-- **`vets` Collection:** Veterinarian details.
-  - `vetId` (String), `name` (String), `branchId` (String)
+- Duplicate medication
+- Duplicate vaccinations
+- Missed follow-ups
+- Incomplete treatment decisions
+- Loss of important medical history
+- Poor coordination between clinic branches
 
-## 6. Security & Access Control
-- **Authentication:** Only authenticated veterinarians can access the system.
-- **Firestore Security Rules:** 
-  - Read access is allowed for all authenticated vets.
-  - Write access is restricted; vets can only create visit records tied to their own `vetId`.
-- **Session Management:** Handled natively by Firebase Auth persistent sessions.
+VetSync provides a centralized digital record for every pet so authorized veterinary staff can access its medical history regardless of which branch previously treated the pet.
 
-## 7. Key UI Components & State Management
-- **Auth Service:** Manages login state and user session persistence.
-- **Search Controller:** Handles query execution and state for the pet search functionality across all branches.
-- **Visit StreamBuilder:** Listens to real-time `visits` updates for a specific pet to ensure chronological display without manual refresh.
-- **Alert/Flagging Utility:** A local utility that processes the visit stream to check `medications` and `nextFollowUpDate` against the current date, triggering UI warnings for overdue follow-ups or recent duplicate medications.
+---
+
+# 3. Goals
+
+The main goals of VetSync are:
+
+1. Centralize veterinary medical records.
+2. Allow authorized veterinary staff to access pet history.
+3. Maintain vaccination history.
+4. Maintain treatment history.
+5. Allow vets to add and update medical records.
+6. Allow vets to search for pets.
+7. Reduce duplicate medication and vaccinations.
+8. Reduce missed follow-ups.
+9. Provide a simple mobile-first interface.
+10. Protect medical records using authentication and database security rules.
+
+---
+
+# 4. Target Users
+
+## Primary Users
+
+### Veterinary Staff / Veterinarians
+
+They can:
+
+- Create an account
+- Log in
+- View pets
+- Search for pets
+- Add pets
+- View pet details
+- View vaccination history
+- Add vaccination records
+- View treatment history
+- Add treatment records
+- Update records
+
+## Future Users
+
+### Pet Owners
+
+Potential future functionality:
+
+- View their pet's medical history
+- View upcoming vaccinations
+- View treatment records
+- Receive follow-up reminders
+
+Pet-owner functionality is outside the initial MVP unless required by the project scope.
+
+---
+
+# 5. MVP Scope
+
+The first version of VetSync will focus on the core problem.
+
+### Authentication
+
+- Signup
+- Login
+- Logout
+- Persistent login
+
+### Pet Management
+
+- View pets
+- Add pet
+- View pet details
+- Search pets
+
+### Medical Records
+
+- View vaccination history
+- Add vaccination record
+- View treatment history
+- Add treatment record
+
+### Security
+
+- Firebase Authentication
+- Firestore Security Rules
+- Authenticated access to medical data
+
+---
+
+# 6. Technology Stack
+
+## Frontend
+
+### Flutter
+
+Flutter will be used to build the cross-platform mobile application.
+
+Flutter is responsible for:
+
+- UI
+- Navigation
+- Forms
+- User interaction
+- State management
+- Displaying Firebase data
+
+---
+
+## Programming Language
+
+### Dart
+
+Dart is used to write the Flutter application.
+
+It will be used for:
+
+- Widgets
+- Models
+- Services
+- Business logic
+- Async operations
+- Firebase integration
+
+---
+
+## Backend / Cloud Platform
+
+### Firebase
+
+Firebase will provide the backend infrastructure.
+
+The main Firebase services used are:
+
+### Firebase Authentication
+
+Used for:
+
+- Signup
+- Login
+- Logout
+- User identity
+- Authentication state
+
+### Cloud Firestore
+
+Used for:
+
+- Users
+- Clinics
+- Pets
+- Vaccinations
+- Treatments
+
+### Firebase Storage
+
+Used for:
+
+- Pet images
+- Medical documents
+- Other supported files
+
+---
+
+# 7. High-Level Architecture
+
+The application follows a Flutter + Firebase architecture.
+
+```text
+                    VETSYNC
+                       |
+                       v
+                Flutter Mobile App
+                       |
+              +--------+--------+
+              |        |        |
+              v        v        v
+              UI     Services  Models
+              |        |        |
+              +--------+--------+
+                       |
+                       v
+                  Firebase SDK
+                       |
+       +---------------+---------------+
+       |               |               |
+       v               v               v
+ Firebase Auth    Cloud Firestore   Firebase Storage
+       |               |               |
+       v               v               v
+    Users          Medical Data      Files
