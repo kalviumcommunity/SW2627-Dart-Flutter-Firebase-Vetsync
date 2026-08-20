@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,8 @@ class SignupScreen extends StatefulWidget{
 class _SignupScreenState extends State<SignupScreen> {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -35,15 +38,31 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _signup() async{
     if(_formKey.currentState!.validate()){
       
-      await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text, 
-        password: _passwordController.text
-      );
+      final UserCredential userCredential = 
+        await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text, 
+          password: _passwordController.text
+        );
+        
+      final User? user = userCredential.user;
 
-      print("signup successfully");
+      if(user != null){
+
+        await _firestore.collection("vets").doc(user.uid).set({
+
+          "name": _nameController.text,
+          "email": _emailController.text,
+          "branchID" : "BRANCH_DELHI"
+        });
+
+      }
+
+      print(user?.uid);
+      print("Signup Sucessfully");
 
     }
   }
+  
 
   @override
   Widget build(BuildContext context) {
