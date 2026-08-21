@@ -1,45 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vetsync/models/pet.dart';
 
-class PetRepository{
+class PetRepository {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static const List<Pet> pets = [
+  Future<List<Pet>> getPets() async {
+    final QuerySnapshot snapshot =
+        await _firestore.collection("pets").get();
 
-     Pet(
-          id: "pet001", 
-          name: "Bruno", 
-          species: "Dog", 
-          breed: "Golden Retriver", 
-          age: 3
-        ),
-         Pet(
-          id: "pet002", 
-          name: "Milo", 
-          species: "Cat", 
-          breed: "Persian", 
-          age: 2
-        ),
-         Pet(
-          id: "pet003", 
-          name: "Tommy", 
-          species: "Dog", 
-          breed: "Labrador", 
-          age: 5
-        ),
-         Pet(
-          id: "pet004", 
-          name: "Tetee", 
-          species: "Cat", 
-          breed: "Lesbian", 
-          age: 1
-        ),
-         Pet(
-          id: "pet005", 
-          name: "Heraaa Beta", 
-          species: "Dog", 
-          breed: "Gay", 
-          age: 9
-        ),
-
-  ];
-
+    return snapshot.docs.map((doc) {
+      return Pet.fromFirestore(doc);
+    }).toList();
+  }
 }
