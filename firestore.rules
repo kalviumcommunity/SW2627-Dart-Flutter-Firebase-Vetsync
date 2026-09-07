@@ -31,5 +31,12 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false; // Managed by system administrators
     }
+
+    // Password resets: allows public create/read for OTP verification flow
+    match /password_resets/{email} {
+      allow read, write: if true;
+    }
   }
 }
+
+
