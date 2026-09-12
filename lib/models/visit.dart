@@ -5,6 +5,7 @@ class Visit {
   final String id;
   final String petId;
   final String branchId;
+  final String branchName;
   final String vetId;
   final String vetName;
   final DateTime date;
@@ -17,6 +18,7 @@ class Visit {
     required this.id,
     required this.petId,
     required this.branchId,
+    this.branchName = '',
     required this.vetId,
     required this.vetName,
     required this.date,
@@ -45,10 +47,14 @@ class Visit {
       meds = List<String>.from(data['medications'].map((e) => e.toString()));
     }
 
+    final branchIdVal = data['branchId'] ?? 'BRANCH_DELHI';
+    final branchNameVal = data['branchName'] ?? '';
+
     return Visit(
       id: doc.id,
       petId: data['petId'] ?? '',
-      branchId: data['branchId'] ?? 'BRANCH_UNKNOWN',
+      branchId: branchIdVal,
+      branchName: branchNameVal.isNotEmpty ? branchNameVal : branchIdVal,
       vetId: data['vetId'] ?? '',
       vetName: data['vetName'] ?? 'Attending Veterinarian',
       date: visitDate,
@@ -65,6 +71,7 @@ class Visit {
       'id': id,
       'petId': petId,
       'branchId': branchId,
+      'branchName': branchName.isNotEmpty ? branchName : branchId,
       'vetId': vetId,
       'vetName': vetName,
       'date': Timestamp.fromDate(date),

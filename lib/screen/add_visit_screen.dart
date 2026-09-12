@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:vetsync/models/branch.dart';
 import 'package:vetsync/models/pet.dart';
 import 'package:vetsync/services/auth_service.dart';
+import 'package:vetsync/services/branch_service.dart';
 import 'package:vetsync/services/visit_service.dart';
 
 class AddVisitScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class AddVisitScreen extends StatefulWidget {
 class _AddVisitScreenState extends State<AddVisitScreen> {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
+  final BranchService _branchService = BranchService();
   final VisitService _visitService = VisitService();
 
   final TextEditingController _notesController = TextEditingController();
@@ -24,10 +27,13 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
       TextEditingController();
 
   final List<String> _medicationsList = [];
+  DateTime _visitDate = DateTime.now();
   DateTime? _nextFollowUpDate;
 
   String _vetName = 'Veterinarian';
-  String _branchId = 'BRANCH_DELHI';
+  String _selectedBranchId = 'BRANCH_DELHI';
+  String _selectedBranchName = 'Delhi Central Clinic';
+  List<Branch> _availableBranches = Branch.defaultBranches;
   bool _isLoading = false;
 
   final List<String> _commonVaccines = [
@@ -54,10 +60,15 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentVetProfile();
+    _loadBranchesAndCurrentVet();
   }
 
-  Future<void> _loadCurrentVetProfile() async {
+  Future<void> _loadBranchesAndCurrentVet() async {
+    final branches = await _branchService.getBranches();
+    setState(() {
+      _availableBranches = branches;
+    });
+
     final user = _authService.currentUser;
     if (user == null) return;
 
@@ -69,9 +80,14 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
 
       if (doc.exists && mounted) {
         final data = doc.data();
+        final bId = data?['branchID'] ?? 'BRANCH_DELHI';
+        final bName =
+            data?['branchName'] ?? _branchService.getBranchByIdSync(bId).name;
+
         setState(() {
           _vetName = data?['name'] ?? user.displayName ?? 'Dr. Veterinarian';
-          _branchId = data?['branchID'] ?? 'BRANCH_DELHI';
+          _selectedBranchId = bId;
+          _selectedBranchName = bName;
         });
       }
     } catch (_) {}
@@ -91,6 +107,32 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
       setState(() {
         _medicationsList.add(trimmed);
         _medicationInputController.clear();
+      });
+    }
+  }
+
+  Future<void> _pickVisitDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _visitDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+
+    if (pickedDate != null && mounted) {
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_visitDate),
+      );
+
+      setState(() {
+        _visitDate = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime?.hour ?? _visitDate.hour,
+          pickedTime?.minute ?? _visitDate.minute,
+        );
       });
     }
   }
@@ -122,9 +164,11 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
     try {
       await _visitService.addVisit(
         petId: widget.pet.id,
-        branchId: _branchId,
+        branchId: _selectedBranchId,
+        branchName: _selectedBranchName,
         vetId: user?.uid ?? 'unknown_vet',
         vetName: _vetName,
+        visitDate: _visitDate,
         notes: _notesController.text,
         medications: _medicationsList,
         vaccination: _vaccinationController.text == 'None / Not Applicable'
@@ -136,8 +180,9 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Visit recorded and synced across all branches! 🏥'),
+        SnackBar(
+          content: Text(
+              'Visit recorded for $_selectedBranchName and synced across branches! 🏥'),
           backgroundColor: Colors.green,
         ),
       );
@@ -191,17 +236,19 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Attending: Dr. $_vetName',
+                              'Attending Veterinarian: Dr. $_vetName',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              'Branch: $_branchId',
+                              'Recording for: $_selectedBranchName',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade700,
+                                color: Colors.blue.shade900,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
@@ -210,7 +257,68 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
+
+                // Clinic Branch Selector for Visit
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedBranchId,
+                  decoration: const InputDecoration(
+                    labelText: 'Clinic Branch of Visit *',
+                    prefixIcon: Icon(Icons.location_city_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _availableBranches.map((branch) {
+                    return DropdownMenuItem(
+                      value: branch.id,
+                      child: Text(
+                        '${branch.name} (${branch.city})',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      final b = _branchService.getBranchByIdSync(val);
+                      setState(() {
+                        _selectedBranchId = val;
+                        _selectedBranchName = b.name;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Visit Date & Time Picker
+                Card(
+                  elevation: 0,
+                  color: Colors.grey.shade100,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.event_available,
+                        color: Color(0xFF1E88E5)),
+                    title: const Text(
+                      'Visit Date & Time',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    subtitle: Text(
+                      '${_visitDate.day.toString().padLeft(2, '0')}/${_visitDate.month.toString().padLeft(2, '0')}/${_visitDate.year} at ${_visitDate.hour.toString().padLeft(2, '0')}:${_visitDate.minute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    trailing: TextButton.icon(
+                      onPressed: _pickVisitDate,
+                      icon: const Icon(Icons.edit_calendar, size: 16),
+                      label: const Text('Change'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // Clinical Notes & Diagnosis
                 TextFormField(
@@ -218,14 +326,14 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Clinical Notes & Diagnosis *',
-                    hintText: 'e.g. Routine checkup, ear infection treated, dental scaling done.',
+                    hintText:
+                        'e.g. Routine checkup, ear infection treated, dental scaling done.',
                     prefixIcon: Icon(Icons.note_alt_outlined),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
-                          ? 'Please provide clinical notes'
-                          : null,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Please provide clinical notes'
+                      : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -235,13 +343,15 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                     if (textEditingValue.text.isEmpty) {
                       return _commonVaccines;
                     }
-                    return _commonVaccines.where((v) =>
-                        v.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                    return _commonVaccines.where((v) => v
+                        .toLowerCase()
+                        .contains(textEditingValue.text.toLowerCase()));
                   },
                   onSelected: (String selection) {
                     _vaccinationController.text = selection;
                   },
-                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onFieldSubmitted) {
                     _vaccinationController.text = controller.text;
                     return TextFormField(
                       controller: controller,
@@ -315,7 +425,8 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                     runSpacing: 6,
                     children: _medicationsList.map((med) {
                       return Chip(
-                        avatar: const Icon(Icons.check_circle_outline, size: 16),
+                        avatar:
+                            const Icon(Icons.check_circle_outline, size: 16),
                         label: Text(med),
                         deleteIcon: const Icon(Icons.cancel, size: 18),
                         onDeleted: () {
@@ -352,7 +463,8 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                     side: BorderSide(color: Colors.grey.shade300),
                   ),
                   child: ListTile(
-                    leading: const Icon(Icons.event_outlined, color: Color(0xFF1E88E5)),
+                    leading: const Icon(Icons.event_outlined,
+                        color: Color(0xFF1E88E5)),
                     title: Text(
                       _nextFollowUpDate == null
                           ? 'No Follow-Up Scheduled'

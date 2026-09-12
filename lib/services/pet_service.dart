@@ -16,7 +16,23 @@ class PetService {
     });
   }
 
-  /// Adds a new pet record to the centralized database.
+  /// Streams pets filtered by a specific clinic branch ID.
+  Stream<List<Pet>> streamPetsByBranch(String branchId) {
+    return _petsCollection
+        .where('branchId', isEqualTo: branchId)
+        .snapshots()
+        .map((snapshot) {
+      final pets = snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList();
+      pets.sort((a, b) {
+        if (a.createdAt == null) return 1;
+        if (b.createdAt == null) return -1;
+        return b.createdAt!.compareTo(a.createdAt!);
+      });
+      return pets;
+    });
+  }
+
+  /// Adds a new pet record to the centralized database with registered branch attribution.
   Future<String> addPet({
     required String name,
     required String species,
@@ -24,6 +40,8 @@ class PetService {
     required int age,
     required String ownerName,
     String gender = 'Unknown',
+    String branchId = 'BRANCH_DELHI',
+    String branchName = 'Delhi Central Clinic',
   }) async {
     final docRef = _petsCollection.doc();
 
@@ -35,6 +53,8 @@ class PetService {
       age: age,
       ownerName: ownerName.trim(),
       gender: gender,
+      branchId: branchId,
+      branchName: branchName,
       createdAt: DateTime.now(),
     );
 
