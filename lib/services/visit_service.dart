@@ -19,12 +19,14 @@ class RecentMedicationInfo {
   final String medicationName;
   final DateTime prescribedDate;
   final String branchId;
+  final String branchName;
   final String vetName;
 
   const RecentMedicationInfo({
     required this.medicationName,
     required this.prescribedDate,
     required this.branchId,
+    required this.branchName,
     required this.vetName,
   });
 }
@@ -50,15 +52,17 @@ class VisitService {
     });
   }
 
-  /// Adds a new clinical visit record to the centralized database.
+  /// Adds a new clinical visit record to the centralized database with branch & vet metadata.
   Future<String> addVisit({
     required String petId,
     required String branchId,
+    String branchName = '',
     required String vetId,
     required String vetName,
     required String notes,
     required List<String> medications,
     String vaccination = '',
+    DateTime? visitDate,
     DateTime? nextFollowUpDate,
   }) async {
     final docRef = _visitsCollection.doc();
@@ -67,9 +71,10 @@ class VisitService {
       id: docRef.id,
       petId: petId,
       branchId: branchId,
+      branchName: branchName.isNotEmpty ? branchName : branchId,
       vetId: vetId,
       vetName: vetName,
-      date: DateTime.now(),
+      date: visitDate ?? DateTime.now(),
       notes: notes.trim(),
       medications: medications,
       vaccination: vaccination.trim(),
@@ -117,6 +122,7 @@ class VisitService {
                 medicationName: med.trim(),
                 prescribedDate: visit.date,
                 branchId: visit.branchId,
+                branchName: visit.branchName,
                 vetName: visit.vetName,
               ),
             );

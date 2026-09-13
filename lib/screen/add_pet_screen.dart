@@ -1,4 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:vetsync/models/branch.dart';
+import 'package:vetsync/services/auth_service.dart';
+import 'package:vetsync/services/branch_service.dart';
 import 'package:vetsync/services/pet_service.dart';
 
 class AddPetScreen extends StatefulWidget {
@@ -11,6 +15,8 @@ class AddPetScreen extends StatefulWidget {
 class _AddPetScreenState extends State<AddPetScreen> {
   final _formKey = GlobalKey<FormState>();
   final PetService _petService = PetService();
+  final BranchService _branchService = BranchService();
+  final AuthService _authService = AuthService();
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _speciesController = TextEditingController();
@@ -19,9 +25,45 @@ class _AddPetScreenState extends State<AddPetScreen> {
   final TextEditingController _ownerNameController = TextEditingController();
 
   String _selectedGender = 'Male';
+  String _selectedBranchId = 'BRANCH_DELHI';
+  String _selectedBranchName = 'Delhi Central Clinic';
+  List<Branch> _availableBranches = Branch.defaultBranches;
   bool _isLoading = false;
 
   final List<String> _commonSpecies = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Other'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBranchesAndCurrentVet();
+  }
+
+  Future<void> _loadBranchesAndCurrentVet() async {
+    final branches = await _branchService.getBranches();
+    setState(() {
+      _availableBranches = branches;
+    });
+
+    final user = _authService.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('vets')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && mounted) {
+          final data = doc.data();
+          final bId = data?['branchID'] ?? 'BRANCH_DELHI';
+          final bName = data?['branchName'] ??
+              _branchService.getBranchByIdSync(bId).name;
+          setState(() {
+            _selectedBranchId = bId;
+            _selectedBranchName = bName;
+          });
+        }
+      } catch (_) {}
+    }
+  }
 
   @override
   void dispose() {
@@ -48,13 +90,16 @@ class _AddPetScreenState extends State<AddPetScreen> {
         age: int.parse(_ageController.text.trim()),
         ownerName: _ownerNameController.text,
         gender: _selectedGender,
+        branchId: _selectedBranchId,
+        branchName: _selectedBranchName,
       );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_nameController.text} registered successfully! 🐾'),
+          content: Text(
+              '${_nameController.text} registered at $_selectedBranchName! 🐾'),
           backgroundColor: Colors.green,
         ),
       );
@@ -91,21 +136,22 @@ class _AddPetScreenState extends State<AddPetScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Info Banner
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E88E5).withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.pets, color: Color(0xFF1E88E5), size: 32),
+                      Icon(Icons.pets, color: Color(0xFF1E88E5), size: 28),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Adding a centralized record available to all clinic branches.',
+                          'Adding a centralized record accessible across all clinic branches.',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF1565C0),
                           ),
@@ -114,7 +160,37 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // Registering Branch Selector
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedBranchId,
+                  decoration: const InputDecoration(
+                    labelText: 'Home / Registering Clinic Branch *',
+                    prefixIcon: Icon(Icons.apartment_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _availableBranches.map((branch) {
+                    return DropdownMenuItem(
+                      value: branch.id,
+                      child: Text(
+                        '${branch.name} (${branch.city})',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      final b = _branchService.getBranchByIdSync(val);
+                      setState(() {
+                        _selectedBranchId = val;
+                        _selectedBranchName = b.name;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
 
                 // Pet Name
                 TextFormField(
@@ -125,10 +201,9 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     prefixIcon: Icon(Icons.badge_outlined),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
-                          ? 'Please enter pet name'
-                          : null,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Please enter pet name'
+                      : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -141,10 +216,9 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
-                          ? 'Please enter owner name'
-                          : null,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Please enter owner name'
+                      : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -161,7 +235,8 @@ class _AddPetScreenState extends State<AddPetScreen> {
                   onSelected: (String selection) {
                     _speciesController.text = selection;
                   },
-                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onFieldSubmitted) {
                     _speciesController.text = controller.text;
                     return TextFormField(
                       controller: controller,
@@ -189,14 +264,13 @@ class _AddPetScreenState extends State<AddPetScreen> {
                   controller: _breedController,
                   decoration: const InputDecoration(
                     labelText: 'Breed *',
-                    hintText: 'e.g. Golden Retriever, Persian, Siamese',
+                    hintText: 'e.g. Golden Retriever, Persian, Labrador',
                     prefixIcon: Icon(Icons.bubble_chart_outlined),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
-                          ? 'Please enter breed'
-                          : null,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Please enter breed'
+                      : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -253,7 +327,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
                 // Submit Button
                 SizedBox(
@@ -292,4 +366,4 @@ class _AddPetScreenState extends State<AddPetScreen> {
       ),
     );
   }
-}
+}

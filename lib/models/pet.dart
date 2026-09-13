@@ -9,6 +9,8 @@ class Pet {
   final int age;
   final String ownerName;
   final String gender;
+  final String branchId;
+  final String branchName;
   final DateTime? createdAt;
 
   const Pet({
@@ -19,6 +21,8 @@ class Pet {
     required this.age,
     required this.ownerName,
     this.gender = 'Unknown',
+    this.branchId = 'BRANCH_DELHI',
+    this.branchName = 'Delhi Central Clinic',
     this.createdAt,
   });
 
@@ -41,6 +45,8 @@ class Pet {
           : (int.tryParse(data['age']?.toString() ?? '0') ?? 0),
       ownerName: data['ownerName'] ?? 'Unknown Owner',
       gender: data['gender'] ?? 'Unknown',
+      branchId: data['branchId'] ?? 'BRANCH_DELHI',
+      branchName: data['branchName'] ?? 'Delhi Central Clinic',
       createdAt: createdDateTime,
     );
   }
@@ -55,9 +61,11 @@ class Pet {
       'age': age,
       'ownerName': ownerName,
       'gender': gender,
+      'branchId': branchId,
+      'branchName': branchName,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
     };
   }
-}
+}

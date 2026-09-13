@@ -16,11 +16,41 @@ class PetDetailsScreen extends StatefulWidget {
 class _PetDetailsScreenState extends State<PetDetailsScreen> {
   final VisitService _visitService = VisitService();
 
+  String _formatDateTime(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = months[dt.month - 1];
+    final year = dt.year;
+
+    final hourNum = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
+    final minuteStr = dt.minute.toString().padLeft(2, '0');
+    final amPm = dt.hour >= 12 ? 'PM' : 'AM';
+
+    return '$day $month $year, $hourNum:$minuteStr $amPm';
+  }
+
+  String _formatDateOnly(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.pet.name),
+        title: Text('${widget.pet.name}\'s Medical File'),
       ),
       body: StreamBuilder<List<Visit>>(
         stream: _visitService.streamVisitsForPet(widget.pet.id),
@@ -162,29 +192,56 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                 ),
               ],
             ),
-            const Divider(height: 24),
+            const Divider(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person, size: 18, color: Colors.grey),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.person_outline,
+                        size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
                     Text(
                       'Owner: ${widget.pet.ownerName}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 13),
                     ),
                   ],
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.transgender, size: 18, color: Colors.grey),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.transgender, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
                     Text(
                       widget.pet.gender,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 13),
                     ),
                   ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.apartment_rounded,
+                    size: 16, color: Color(0xFF1E88E5)),
+                const SizedBox(width: 6),
+                Text(
+                  'Home Clinic: ',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                Expanded(
+                  child: Text(
+                    widget.pet.branchName.isNotEmpty
+                        ? widget.pet.branchName
+                        : widget.pet.branchId,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E88E5),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -209,7 +266,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Clinical Status: Up to date. No overdue follow-ups or recent duplicate medication risks.',
+                'Clinical Status: Up to date. No overdue follow-ups or recent cross-branch medication risks.',
                 style: TextStyle(
                   color: Colors.green,
                   fontWeight: FontWeight.w600,
@@ -253,7 +310,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Scheduled follow-up on ${report.overdueDate!.day}/${report.overdueDate!.month}/${report.overdueDate!.year} was missed.',
+                        'Scheduled follow-up on ${_formatDateOnly(report.overdueDate!)} was missed.',
                         style: const TextStyle(fontSize: 13),
                       ),
                     ],
@@ -294,7 +351,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Check to avoid duplicate prescription across branches:',
+                        'Check previous branch prescriptions to avoid duplicate dosage:',
                         style: TextStyle(fontSize: 12, color: Colors.black87),
                       ),
                       const SizedBox(height: 6),
@@ -302,11 +359,14 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                         spacing: 6,
                         runSpacing: 4,
                         children: report.recentMedications.map((med) {
+                          final branchDisplay = med.branchName.isNotEmpty
+                              ? med.branchName
+                              : med.branchId;
                           return Chip(
                             backgroundColor: Colors.white,
                             side: BorderSide(color: Colors.purple.shade200),
                             label: Text(
-                              '${med.medicationName} (${med.branchId})',
+                              '${med.medicationName} ($branchDisplay)',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -328,8 +388,11 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
   }
 
   Widget _buildVisitCard(Visit visit) {
+    final branchDisplay =
+        visit.branchName.isNotEmpty ? visit.branchName : visit.branchId;
+
     return Card(
-      elevation: 1,
+      elevation: 1.5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.shade200),
@@ -339,42 +402,83 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Date + Branch Badge
+            // Header: Date & Time + Branch Badge
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.event, size: 16, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${visit.date.day}/${visit.date.month}/${visit.date.year}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.event_available,
+                              size: 17, color: Color(0xFF1E88E5)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _formatDateTime(visit.date),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_pin,
+                              size: 15, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Attended by: Dr. ${visit.vetName}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade800,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
+                // Branch Badge
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E88E5).withAlpha(30),
-                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xFF1E88E5).withAlpha(25),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF1E88E5).withAlpha(50),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.apartment,
-                          size: 14, color: Color(0xFF1E88E5)),
-                      const SizedBox(width: 4),
-                      Text(
-                        visit.branchId,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E88E5),
+                      const Icon(
+                        Icons.location_city_rounded,
+                        size: 14,
+                        color: Color(0xFF1E88E5),
+                      ),
+                      const SizedBox(width: 5),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 140),
+                        child: Text(
+                          branchDisplay,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E88E5),
+                          ),
                         ),
                       ),
                     ],
@@ -382,32 +486,21 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-
-            // Attending Vet
-            Text(
-              'Attended by: Dr. ${visit.vetName}',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade700,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const Divider(height: 18),
+            const Divider(height: 20),
 
             // Clinical Diagnosis / Notes
             const Text(
-              'Diagnosis & Notes:',
+              'Diagnosis & Clinical Notes:',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               visit.notes,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14, height: 1.3),
             ),
 
             // Vaccination Administered (if any)
@@ -459,6 +552,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF1E88E5),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   );
@@ -483,7 +577,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                     const Icon(Icons.schedule, size: 16, color: Colors.orange),
                     const SizedBox(width: 6),
                     Text(
-                      'Next Follow-Up: ${visit.nextFollowUpDate!.day}/${visit.nextFollowUpDate!.month}/${visit.nextFollowUpDate!.year}',
+                      'Next Follow-Up: ${_formatDateOnly(visit.nextFollowUpDate!)}',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -519,7 +613,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'When any clinic branch records a visit, it will appear here in real-time.',
+            'When any clinic branch records a visit, it will appear here in real-time with full doctor & branch details.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,

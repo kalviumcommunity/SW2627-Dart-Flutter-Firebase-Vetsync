@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:vetsync/models/branch.dart';
 import 'package:vetsync/services/auth_service.dart';
+import 'package:vetsync/services/branch_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -12,6 +14,7 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final AuthService _authService = AuthService();
+  final BranchService _branchService = BranchService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final _formKey = GlobalKey<FormState>();
@@ -22,9 +25,28 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
+  String _selectedBranchId = 'BRANCH_DELHI';
+  String _selectedBranchName = 'Delhi Central Clinic';
+  List<Branch> _availableBranches = Branch.defaultBranches;
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBranches();
+  }
+
+  Future<void> _loadBranches() async {
+    final branches = await _branchService.getBranches();
+    if (mounted) {
+      setState(() {
+        _availableBranches = branches;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -44,8 +66,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       // 1. Create the Auth user in Firebase Authentication
-      final UserCredential userCredential =
-          await _authService.signUpWithEmail(
+      final UserCredential userCredential = await _authService.signUpWithEmail(
         email: _emailController.text,
         password: _passwordController.text,
       );
@@ -58,7 +79,8 @@ class _SignupScreenState extends State<SignupScreen> {
           'uid': user.uid,
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
-          'branchID': 'BRANCH_DELHI',
+          'branchID': _selectedBranchId,
+          'branchName': _selectedBranchName,
           'role': 'veterinarian',
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -67,8 +89,9 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully! Welcome to VetSync.'),
+        SnackBar(
+          content: Text(
+              'Account created successfully! Welcome to $_selectedBranchName.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -135,13 +158,13 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Register as a veterinary doctor / staff member',
+                    'Register as a veterinary doctor / clinic staff member',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
                   // Full Name
                   TextFormField(
@@ -178,6 +201,36 @@ class _SignupScreenState extends State<SignupScreen> {
                         return 'Please enter a valid email address';
                       }
                       return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Branch Selector
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedBranchId,
+                    decoration: const InputDecoration(
+                      labelText: 'Primary Clinic Branch',
+                      prefixIcon: Icon(Icons.apartment_rounded),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _availableBranches.map((b) {
+                      return DropdownMenuItem(
+                        value: b.id,
+                        child: Text(
+                          '${b.name} (${b.city})',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        final b = _branchService.getBranchByIdSync(val);
+                        setState(() {
+                          _selectedBranchId = val;
+                          _selectedBranchName = b.name;
+                        });
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
@@ -246,7 +299,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
                   // Submit Button
                   SizedBox(
@@ -302,4 +355,4 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-}
+}
