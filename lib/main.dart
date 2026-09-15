@@ -3,8 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vetsync/firebase_options.dart';
 import 'package:vetsync/services/auth_service.dart';
-import 'package:vetsync/screen/home_screen.dart';
+import 'package:vetsync/screen/main_navigation_screen.dart';
 import 'package:vetsync/screen/login_screen.dart';
+import 'package:vetsync/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,12 +26,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'VetSync',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E88E5),
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
       home: const AuthWrapper(),
     );
   }
@@ -56,9 +52,9 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // If user is authenticated, direct to HomeScreen
+        // If user is authenticated, direct to MainNavigationScreen
         if (snapshot.hasData && snapshot.data != null) {
-          return const HomeScreen();
+          return const MainNavigationScreen();
         }
 
         // Otherwise, show LoginScreen
@@ -67,4 +63,3 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
-

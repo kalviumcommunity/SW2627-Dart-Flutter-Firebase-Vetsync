@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vetsync/models/branch.dart';
 import 'package:vetsync/services/branch_service.dart';
+import 'package:vetsync/theme/app_colors.dart';
 
 class BranchSelectionScreen extends StatefulWidget {
   final String? currentBranchId;
@@ -65,17 +66,14 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.check_circle, color: Colors.white),
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Switched active clinic to ${branch.name} (${branch.city})',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+                child: Text('Active clinic switched to ${branch.name} (${branch.city})'),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF1E88E5),
+          backgroundColor: AppColors.success,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -85,8 +83,8 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to update branch: $e'),
-          backgroundColor: Colors.redAccent,
+          content: Text('Failed to update active branch: $e'),
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -101,25 +99,16 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.apartment_rounded, color: Color(0xFF1E88E5)),
-            SizedBox(width: 8),
-            Text('Clinic Branches', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
+        title: const Text('Clinic Branches'),
       ),
       body: StreamBuilder<List<Branch>>(
-        stream:
-            widget.customBranchStream ?? _branchService.streamBranches(),
+        stream: widget.customBranchStream ?? _branchService.streamBranches(),
         builder: (context, snapshot) {
           final branches = snapshot.data ?? Branch.defaultBranches;
-
-          // Extract unique cities
           final cities = ['All', ...{...branches.map((b) => b.city)}];
 
-          // Filter branches by search query and city
           final filteredBranches = branches.where((branch) {
             final matchesCity =
                 _selectedCity == 'All' || branch.city == _selectedCity;
@@ -139,22 +128,22 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
 
           return Column(
             children: [
-              // Active Branch Banner Card
+              // Active Clinic Banner
               if (!widget.returnSelectedOnly)
                 Container(
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+                      colors: [AppColors.primary, AppColors.primaryDark],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1E88E5).withAlpha(60),
-                        blurRadius: 8,
+                        color: AppColors.primary.withAlpha(50),
+                        blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
                     ],
@@ -164,13 +153,13 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(50),
+                          color: Colors.white.withAlpha(40),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.location_city_rounded,
+                          Icons.apartment_rounded,
                           color: Colors.white,
-                          size: 28,
+                          size: 24,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -178,36 +167,24 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.greenAccent.shade400,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'ACTIVE CLINIC',
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'CURRENT ACTIVE CLINIC',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 9,
+                                  letterSpacing: 0.5,
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  activeBranch.city,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -215,7 +192,14 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              activeBranch.city,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -231,12 +215,14 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search clinic name, city, address...',
-                    prefixIcon:
-                        const Icon(Icons.search, color: Color(0xFF1E88E5)),
+                    hintText: 'Search clinic name, city, or address...',
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.primary,
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear_rounded, size: 18),
                             onPressed: () {
                               _searchController.clear();
                               setState(() {
@@ -246,12 +232,8 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                    fillColor: AppColors.surface,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onChanged: (val) {
                     setState(() {
@@ -263,13 +245,12 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
 
               // City Filter Chips
               SizedBox(
-                height: 44,
+                height: 40,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: cities.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 8),
+                  separatorBuilder: (context, index) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final city = cities[index];
                     final isSelected = _selectedCity == city;
@@ -277,20 +258,17 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                       label: Text(city),
                       selected: isSelected,
                       showCheckmark: false,
-                      selectedColor: const Color(0xFF1E88E5),
+                      selectedColor: AppColors.primary,
                       labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         fontSize: 12,
                       ),
-                      backgroundColor: Colors.grey.shade100,
+                      backgroundColor: AppColors.surface,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                         side: BorderSide(
-                          color: isSelected
-                              ? const Color(0xFF1E88E5)
-                              : Colors.grey.shade300,
+                          color: isSelected ? AppColors.primary : AppColors.border,
                         ),
                       ),
                       onSelected: (_) {
@@ -302,241 +280,198 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
 
               // Branches List
               Expanded(
-                child: filteredBranches.isEmpty
-                    ? Center(
+                child: ListView.separated(
+                  itemCount: filteredBranches.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final branch = filteredBranches[index];
+                    final isActive =
+                        branch.id.toLowerCase() == _activeBranchId.toLowerCase();
+
+                    return Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: isActive ? AppColors.primary : AppColors.border,
+                          width: isActive ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.location_off,
-                                size: 54, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No clinic branches match "$_searchQuery"',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? AppColors.primaryUltraSoft
+                                        : AppColors.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.local_hospital_rounded,
+                                    color: isActive
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              branch.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 15,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          if (branch.isMainBranch)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.warningSurface,
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(
+                                                    color: AppColors.warningBorder),
+                                              ),
+                                              child: const Text(
+                                                'MAIN HUB',
+                                                style: TextStyle(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppColors.warning,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        branch.city,
+                                        style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Address
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on_outlined,
+                                    size: 15, color: AppColors.textMuted),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    branch.address,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+
+                            // Operating Hours
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time_rounded,
+                                    size: 15, color: AppColors.textMuted),
+                                const SizedBox(width: 6),
+                                Text(
+                                  branch.operatingHours,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Action Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 40,
+                              child: isActive
+                                  ? OutlinedButton.icon(
+                                      onPressed: null,
+                                      icon: const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: AppColors.success,
+                                        size: 16,
+                                      ),
+                                      label: const Text(
+                                        'Active Clinic Selected',
+                                        style: TextStyle(
+                                          color: AppColors.success,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(
+                                            color: AppColors.successBorder),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    )
+                                  : ElevatedButton.icon(
+                                      onPressed: _isSwitching
+                                          ? null
+                                          : () => _selectBranch(branch),
+                                      icon: const Icon(
+                                        Icons.swap_horiz_rounded,
+                                        size: 16,
+                                      ),
+                                      label: Text(
+                                        widget.returnSelectedOnly
+                                            ? 'Select This Branch'
+                                            : 'Switch To This Branch',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: filteredBranches.length,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        itemBuilder: (context, index) {
-                          final branch = filteredBranches[index];
-                          final isActive =
-                              branch.id.toLowerCase() ==
-                              _activeBranchId.toLowerCase();
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            elevation: isActive ? 2 : 1,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: BorderSide(
-                                color: isActive
-                                    ? const Color(0xFF1E88E5)
-                                    : Colors.grey.shade200,
-                                width: isActive ? 2 : 1,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 20,
-                                        backgroundColor: isActive
-                                            ? const Color(0xFF1E88E5)
-                                            : Colors.grey.shade100,
-                                        child: Icon(
-                                          Icons.local_hospital,
-                                          color: isActive
-                                              ? Colors.white
-                                              : const Color(0xFF1E88E5),
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    branch.name,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                    ),
-                                                  ),
-                                                ),
-                                                if (branch.isMainBranch)
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Colors.amber.shade100,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
-                                                    ),
-                                                    child: Text(
-                                                      'MAIN HUB',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors
-                                                            .amber.shade900,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              branch.city,
-                                              style: TextStyle(
-                                                color: Colors.blue.shade700,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Address
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(Icons.pin_drop_outlined,
-                                          size: 16, color: Colors.grey),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          branch.address,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey.shade800,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  // Hours & Contact
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.access_time,
-                                          size: 16, color: Colors.grey),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          branch.operatingHours,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      ),
-                                      if (branch.phone.isNotEmpty) ...[
-                                        const Icon(Icons.phone_outlined,
-                                            size: 16, color: Colors.grey),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          branch.phone,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                  const SizedBox(height: 14),
-                                  // Select Button / Active Badge
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: isActive
-                                        ? OutlinedButton.icon(
-                                            onPressed: null,
-                                            icon: const Icon(
-                                              Icons.check_circle,
-                                              color: Colors.green,
-                                              size: 18,
-                                            ),
-                                            label: const Text(
-                                              'Active Location Selected',
-                                              style: TextStyle(
-                                                color: Colors.green,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            style: OutlinedButton.styleFrom(
-                                              side: BorderSide(
-                                                  color: Colors.green.shade300),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                          )
-                                        : ElevatedButton.icon(
-                                            onPressed: _isSwitching
-                                                ? null
-                                                : () => _selectBranch(branch),
-                                            icon: const Icon(
-                                                Icons.swap_horiz_rounded,
-                                                size: 18),
-                                            label: Text(
-                                              widget.returnSelectedOnly
-                                                  ? 'Choose This Branch'
-                                                  : 'Switch To This Branch',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  const Color(0xFF1E88E5),
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
                       ),
+                    );
+                  },
+                ),
               ),
             ],
           );
