@@ -4,6 +4,7 @@ import 'package:vetsync/models/branch.dart';
 import 'package:vetsync/services/auth_service.dart';
 import 'package:vetsync/services/branch_service.dart';
 import 'package:vetsync/services/pet_service.dart';
+import 'package:vetsync/theme/app_colors.dart';
 
 class AddPetScreen extends StatefulWidget {
   const AddPetScreen({super.key});
@@ -98,9 +99,16 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              '${_nameController.text} registered at $_selectedBranchName! 🐾'),
-          backgroundColor: Colors.green,
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('${_nameController.text} registered at $_selectedBranchName!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
         ),
       );
 
@@ -109,8 +117,8 @@ class _AddPetScreenState extends State<AddPetScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add pet: $e'),
-          backgroundColor: Colors.redAccent,
+          content: Text('Failed to register pet record: $e'),
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -125,12 +133,13 @@ class _AddPetScreenState extends State<AddPetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Register New Pet'),
+        title: const Text('Register Patient'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -140,221 +149,226 @@ class _AddPetScreenState extends State<AddPetScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E88E5).withAlpha(20),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.primaryUltraSoft,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primarySoft),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.pets, color: Color(0xFF1E88E5), size: 28),
+                      Icon(Icons.pets_rounded, color: AppColors.primary, size: 24),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Adding a centralized record accessible across all clinic branches.',
+                          'Registering a centralized medical chart accessible across all clinic branches in real-time.',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1565C0),
+                            color: AppColors.primaryDark,
+                            height: 1.35,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Registering Branch Selector
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedBranchId,
-                  decoration: const InputDecoration(
-                    labelText: 'Home / Registering Clinic Branch *',
-                    prefixIcon: Icon(Icons.apartment_rounded),
-                    border: OutlineInputBorder(),
+                // Form Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  items: _availableBranches.map((branch) {
-                    return DropdownMenuItem(
-                      value: branch.id,
-                      child: Text(
-                        '${branch.name} (${branch.city})',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      final b = _branchService.getBranchByIdSync(val);
-                      setState(() {
-                        _selectedBranchId = val;
-                        _selectedBranchName = b.name;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Pet Name
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Pet Name *',
-                    hintText: 'e.g. Max, Bella, Charlie',
-                    prefixIcon: Icon(Icons.badge_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Please enter pet name'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Owner Name
-                TextFormField(
-                  controller: _ownerNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Owner / Guardian Name *',
-                    hintText: 'e.g. John Smith',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Please enter owner name'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Species Dropdown / Input
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
-                      return _commonSpecies;
-                    }
-                    return _commonSpecies.where((species) => species
-                        .toLowerCase()
-                        .contains(textEditingValue.text.toLowerCase()));
-                  },
-                  onSelected: (String selection) {
-                    _speciesController.text = selection;
-                  },
-                  fieldViewBuilder:
-                      (context, controller, focusNode, onFieldSubmitted) {
-                    _speciesController.text = controller.text;
-                    return TextFormField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      decoration: const InputDecoration(
-                        labelText: 'Species *',
-                        hintText: 'Dog, Cat, Bird, etc.',
-                        prefixIcon: Icon(Icons.category_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? 'Please enter or select species'
-                              : null,
-                      onChanged: (val) {
-                        _speciesController.text = val;
-                      },
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Breed
-                TextFormField(
-                  controller: _breedController,
-                  decoration: const InputDecoration(
-                    labelText: 'Breed *',
-                    hintText: 'e.g. Golden Retriever, Persian, Labrador',
-                    prefixIcon: Icon(Icons.bubble_chart_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Please enter breed'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Age & Gender Row
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: TextFormField(
-                        controller: _ageController,
-                        keyboardType: TextInputType.number,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Registering Clinic Branch
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedBranchId,
                         decoration: const InputDecoration(
-                          labelText: 'Age (Years) *',
-                          hintText: 'e.g. 3',
-                          prefixIcon: Icon(Icons.cake_outlined),
-                          border: OutlineInputBorder(),
+                          labelText: 'Registering Clinic Branch *',
+                          prefixIcon: Icon(Icons.apartment_rounded),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Enter age';
-                          }
-                          final parsed = int.tryParse(value.trim());
-                          if (parsed == null || parsed < 0) {
-                            return 'Valid number';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 1,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedGender,
-                        decoration: const InputDecoration(
-                          labelText: 'Gender',
-                          prefixIcon: Icon(Icons.transgender_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ['Male', 'Female', 'Unknown'].map((gender) {
+                        items: _availableBranches.map((branch) {
                           return DropdownMenuItem(
-                            value: gender,
-                            child: Text(gender),
+                            value: branch.id,
+                            child: Text(
+                              '${branch.name} (${branch.city})',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13),
+                            ),
                           );
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) {
+                            final b = _branchService.getBranchByIdSync(val);
                             setState(() {
-                              _selectedGender = val;
+                              _selectedBranchId = val;
+                              _selectedBranchName = b.name;
                             });
                           }
                         },
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+
+                      // Pet Name
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Pet Name *',
+                          hintText: 'e.g. Max, Bella, Charlie',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                        ),
+                        validator: (value) => value == null || value.trim().isEmpty
+                            ? 'Please enter pet name'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Owner / Guardian Name
+                      TextFormField(
+                        controller: _ownerNameController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Owner / Guardian Name *',
+                          hintText: 'e.g. John Smith',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
+                        ),
+                        validator: (value) => value == null || value.trim().isEmpty
+                            ? 'Please enter owner name'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Species Dropdown / Autocomplete
+                      Autocomplete<String>(
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return _commonSpecies;
+                          }
+                          return _commonSpecies.where((species) => species
+                              .toLowerCase()
+                              .contains(textEditingValue.text.toLowerCase()));
+                        },
+                        onSelected: (String selection) {
+                          _speciesController.text = selection;
+                        },
+                        fieldViewBuilder:
+                            (context, controller, focusNode, onFieldSubmitted) {
+                          _speciesController.text = controller.text;
+                          return TextFormField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Species *',
+                              hintText: 'Dog, Cat, Bird, etc.',
+                              prefixIcon: Icon(Icons.category_outlined),
+                            ),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                    ? 'Please enter or select species'
+                                    : null,
+                            onChanged: (val) {
+                              _speciesController.text = val;
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Breed
+                      TextFormField(
+                        controller: _breedController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Breed *',
+                          hintText: 'e.g. Golden Retriever, Persian, Labrador',
+                          prefixIcon: Icon(Icons.bubble_chart_outlined),
+                        ),
+                        validator: (value) => value == null || value.trim().isEmpty
+                            ? 'Please enter breed'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Age & Gender Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _ageController,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(
+                                labelText: 'Age (Years) *',
+                                hintText: 'e.g. 3',
+                                prefixIcon: Icon(Icons.cake_outlined),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Enter age';
+                                }
+                                final parsed = int.tryParse(value.trim());
+                                if (parsed == null || parsed < 0) {
+                                  return 'Valid number';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedGender,
+                              decoration: const InputDecoration(
+                                labelText: 'Gender',
+                                prefixIcon: Icon(Icons.transgender_rounded),
+                              ),
+                              items: ['Male', 'Female', 'Unknown'].map((gender) {
+                                return DropdownMenuItem(
+                                  value: gender,
+                                  child: Text(gender, style: const TextStyle(fontSize: 13)),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _selectedGender = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 // Submit Button
                 SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
+                  height: 50,
+                  child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _submitPet,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E88E5),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: _isLoading
+                    icon: const Icon(Icons.save_rounded),
+                    label: _isLoading
                         ? const SizedBox(
-                            height: 24,
-                            width: 24,
+                            height: 22,
+                            width: 22,
                             child: CircularProgressIndicator(
                               color: Colors.white,
-                              strokeWidth: 2.5,
+                              strokeWidth: 2.2,
                             ),
                           )
                         : const Text(
-                            'Save Centralized Record',
+                            'Register Patient Record',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                   ),

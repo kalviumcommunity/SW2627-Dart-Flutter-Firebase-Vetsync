@@ -6,6 +6,9 @@ import 'package:vetsync/services/pet_service.dart';
 import 'package:vetsync/screen/add_pet_screen.dart';
 import 'package:vetsync/screen/branch_selection_screen.dart';
 import 'package:vetsync/screen/pet_details_screen.dart';
+import 'package:vetsync/theme/app_colors.dart';
+import 'package:vetsync/widgets/clinic_badge.dart';
+import 'package:vetsync/widgets/empty_state_view.dart';
 
 class PetsScreen extends StatefulWidget {
   const PetsScreen({super.key});
@@ -28,15 +31,28 @@ class _PetsScreenState extends State<PetsScreen> {
     super.dispose();
   }
 
+  IconData _getSpeciesIcon(String species) {
+    final s = species.toLowerCase();
+    if (s.contains('dog') || s.contains('canine')) {
+      return Icons.pets_rounded;
+    } else if (s.contains('cat') || s.contains('feline')) {
+      return Icons.cruelty_free_rounded;
+    } else if (s.contains('bird') || s.contains('avian')) {
+      return Icons.flutter_dash_rounded;
+    }
+    return Icons.pets_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Pet Health Records'),
+        title: const Text('Patient Directory'),
         actions: [
           IconButton(
-            tooltip: 'Branches',
-            icon: const Icon(Icons.location_city_outlined),
+            tooltip: 'Clinic Branches',
+            icon: const Icon(Icons.location_city_rounded),
             onPressed: () {
               Navigator.push(
                 context,
@@ -55,19 +71,20 @@ class _PetsScreenState extends State<PetsScreen> {
 
           return Column(
             children: [
-              // Search Bar
+              // Search Input Bar
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search pet, owner, breed, branch...',
-                    prefixIcon:
-                        const Icon(Icons.search, color: Color(0xFF1E88E5)),
+                    hintText: 'Search by pet name, owner, breed or ID...',
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.primary,
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear_rounded, size: 18),
                             onPressed: () {
                               _searchController.clear();
                               setState(() {
@@ -77,12 +94,8 @@ class _PetsScreenState extends State<PetsScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                    fillColor: AppColors.surface,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -92,9 +105,9 @@ class _PetsScreenState extends State<PetsScreen> {
                 ),
               ),
 
-              // Branch Filter Chips
+              // Clinic Branch Filter Chips
               SizedBox(
-                height: 44,
+                height: 40,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -103,23 +116,23 @@ class _PetsScreenState extends State<PetsScreen> {
                       label: const Text('All Clinics'),
                       selected: _selectedBranchFilter == 'ALL',
                       showCheckmark: false,
-                      selectedColor: const Color(0xFF1E88E5),
+                      selectedColor: AppColors.primary,
                       labelStyle: TextStyle(
                         color: _selectedBranchFilter == 'ALL'
                             ? Colors.white
-                            : Colors.black87,
+                            : AppColors.textSecondary,
                         fontWeight: _selectedBranchFilter == 'ALL'
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         fontSize: 12,
                       ),
-                      backgroundColor: Colors.grey.shade100,
+                      backgroundColor: AppColors.surface,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                         side: BorderSide(
                           color: _selectedBranchFilter == 'ALL'
-                              ? const Color(0xFF1E88E5)
-                              : Colors.grey.shade300,
+                              ? AppColors.primary
+                              : AppColors.border,
                         ),
                       ),
                       onSelected: (_) {
@@ -137,21 +150,19 @@ class _PetsScreenState extends State<PetsScreen> {
                           label: Text('${b.city} (${b.name.split(' ').first})'),
                           selected: isSelected,
                           showCheckmark: false,
-                          selectedColor: const Color(0xFF1E88E5),
+                          selectedColor: AppColors.primary,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
                             fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             fontSize: 12,
                           ),
-                          backgroundColor: Colors.grey.shade100,
+                          backgroundColor: AppColors.surface,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(10),
                             side: BorderSide(
-                              color: isSelected
-                                  ? const Color(0xFF1E88E5)
-                                  : Colors.grey.shade300,
+                              color: isSelected ? AppColors.primary : AppColors.border,
                             ),
                           ),
                           onSelected: (_) {
@@ -165,7 +176,7 @@ class _PetsScreenState extends State<PetsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
 
               // Real-Time Pets List
               Expanded(
@@ -177,11 +188,13 @@ class _PetsScreenState extends State<PetsScreen> {
                     }
 
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Failed to load records: ${snapshot.error}',
-                          style: const TextStyle(color: Colors.red),
-                        ),
+                      return EmptyStateView(
+                        icon: Icons.error_outline_rounded,
+                        title: 'Unable to Load Records',
+                        description: 'Please check your connection and try again.',
+                        isError: true,
+                        actionLabel: 'Retry',
+                        onAction: () => setState(() {}),
                       );
                     }
 
@@ -202,6 +215,8 @@ class _PetsScreenState extends State<PetsScreen> {
                           pet.ownerName.toLowerCase().contains(_searchQuery);
                       final breedMatches =
                           pet.breed.toLowerCase().contains(_searchQuery);
+                      final idMatches =
+                          pet.id.toLowerCase().contains(_searchQuery);
                       final branchMatches =
                           pet.branchName.toLowerCase().contains(_searchQuery) ||
                               pet.branchId.toLowerCase().contains(_searchQuery);
@@ -209,97 +224,87 @@ class _PetsScreenState extends State<PetsScreen> {
                       return nameMatches ||
                           ownerMatches ||
                           breedMatches ||
+                          idMatches ||
                           branchMatches;
                     }).toList();
 
                     if (filteredPets.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _searchQuery.isNotEmpty
-                                    ? Icons.search_off
-                                    : Icons.pets,
-                                size: 64,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _searchQuery.isNotEmpty
-                                    ? 'No pets match "$_searchQuery"'
-                                    : 'No pets found for this clinic location.',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _selectedBranchFilter != 'ALL'
-                                    ? 'Try switching to "All Clinics" or add a new pet for this branch.'
-                                    : 'Tap the "+" button below to register a pet record.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      return EmptyStateView(
+                        icon: _searchQuery.isNotEmpty
+                            ? Icons.search_off_rounded
+                            : Icons.pets_rounded,
+                        title: _searchQuery.isNotEmpty
+                            ? 'No Patients Found'
+                            : 'Patient Directory Empty',
+                        description: _searchQuery.isNotEmpty
+                            ? 'No records match "$_searchQuery". Try searching with a different pet name or owner.'
+                            : 'No pets have been registered for this clinic location yet.',
+                        actionLabel: _searchQuery.isEmpty ? 'Register First Pet' : null,
+                        onAction: _searchQuery.isEmpty
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AddPetScreen(),
+                                  ),
+                                );
+                              }
+                            : null,
                       );
                     }
 
-                    return ListView.builder(
+                    return ListView.separated(
                       itemCount: filteredPets.length,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      separatorBuilder: (context, index) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final Pet pet = filteredPets[index];
 
                         return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 1.5,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: Colors.grey.shade200),
+                            borderRadius: BorderRadius.circular(14),
+                            side: const BorderSide(color: AppColors.border),
                           ),
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      PetDetailsScreen(pet: pet),
+                                  builder: (context) => PetDetailsScreen(pet: pet),
                                 ),
                               );
                             },
                             child: Padding(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(16),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  CircleAvatar(
-                                    radius: 26,
-                                    backgroundColor:
-                                        const Color(0xFF1E88E5).withAlpha(25),
-                                    child: const Icon(
-                                      Icons.pets,
-                                      color: Color(0xFF1E88E5),
-                                      size: 26,
+                                  // Pet Avatar
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryUltraSoft,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: AppColors.primarySoft,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      _getSpeciesIcon(pet.species),
+                                      color: AppColors.primary,
+                                      size: 24,
                                     ),
                                   ),
                                   const SizedBox(width: 14),
+
+                                  // Pet Info
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -307,77 +312,75 @@ class _PetsScreenState extends State<PetsScreen> {
                                               child: Text(
                                                 pet.name,
                                                 style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                  color: AppColors.textPrimary,
                                                 ),
                                               ),
                                             ),
-                                            Text(
-                                              '(${pet.species})',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.surfaceVariant,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                pet.species,
+                                                style: const TextStyle(
+                                                  color: AppColors.textSecondary,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 3),
                                         Text(
                                           '${pet.breed} • ${pet.age} Yrs • ${pet.gender}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 13,
-                                            color: Colors.grey.shade700,
+                                            color: AppColors.textSecondary,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          'Owner: ${pet.ownerName}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.grey.shade800,
-                                          ),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.person_outline_rounded,
+                                              size: 14,
+                                              color: AppColors.textMuted,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Guardian: ${pet.ownerName}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(height: 6),
-                                        // Branch Badge
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF1E88E5)
-                                                .withAlpha(20),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.apartment_rounded,
-                                                size: 13,
-                                                color: Color(0xFF1E88E5),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                pet.branchName.isNotEmpty
-                                                    ? pet.branchName
-                                                    : pet.branchId,
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF1E88E5),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                        const SizedBox(height: 8),
+                                        ClinicBadge(
+                                          branchName: pet.branchName.isNotEmpty
+                                              ? pet.branchName
+                                              : pet.branchId,
+                                          isCompact: true,
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: Colors.grey,
+
+                                  // Chevron
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 12),
+                                    child: Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: AppColors.textLight,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -402,10 +405,8 @@ class _PetsScreenState extends State<PetsScreen> {
             ),
           );
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Pet'),
-        backgroundColor: const Color(0xFF1E88E5),
-        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Register Pet'),
       ),
     );
   }

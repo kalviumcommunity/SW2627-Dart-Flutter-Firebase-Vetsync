@@ -5,6 +5,8 @@ import 'package:vetsync/models/pet.dart';
 import 'package:vetsync/services/auth_service.dart';
 import 'package:vetsync/services/branch_service.dart';
 import 'package:vetsync/services/visit_service.dart';
+import 'package:vetsync/theme/app_colors.dart';
+import 'package:vetsync/theme/app_text_styles.dart';
 
 class AddVisitScreen extends StatefulWidget {
   final Pet pet;
@@ -39,10 +41,10 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
   final List<String> _commonVaccines = [
     'Rabies',
     'DHPP (Distemper, Hepatitis, Parvovirus)',
-    'Bordetella',
+    'Bordetella (Kennel Cough)',
     'FVRCP (Feline Viral Rhinotracheitis)',
     'Leptospirosis',
-    'Deworming',
+    'Deworming Protocol',
     'None / Not Applicable',
   ];
 
@@ -181,9 +183,16 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              'Visit recorded for $_selectedBranchName and synced across branches! 🏥'),
-          backgroundColor: Colors.green,
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Visit recorded for $_selectedBranchName and synced across branches!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
         ),
       );
 
@@ -193,7 +202,7 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to save visit record: $e'),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -208,28 +217,77 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('New Visit: ${widget.pet.name}'),
+        title: Text('Record Visit: ${widget.pet.name}'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Branch & Doctor attribution banner
+                // Patient Summary Strip
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.shade200),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.verified_user, color: Color(0xFF1E88E5)),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryUltraSoft,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.pets_rounded,
+                            color: AppColors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.pet.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              '${widget.pet.species} • ${widget.pet.breed} • Guardian: ${widget.pet.ownerName}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Attending Doctor Banner
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryUltraSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primarySoft),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_user_rounded,
+                          color: AppColors.primary, size: 22),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -238,16 +296,16 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                             Text(
                               'Attending Veterinarian: Dr. $_vetName',
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: AppColors.primaryDark,
                               ),
                             ),
-                            const SizedBox(height: 2),
                             Text(
-                              'Recording for: $_selectedBranchName',
-                              style: TextStyle(
+                              'Attributed Branch: $_selectedBranchName',
+                              style: const TextStyle(
                                 fontSize: 12,
-                                color: Colors.blue.shade900,
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -257,133 +315,140 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
-
-                // Clinic Branch Selector for Visit
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedBranchId,
-                  decoration: const InputDecoration(
-                    labelText: 'Clinic Branch of Visit *',
-                    prefixIcon: Icon(Icons.location_city_rounded),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _availableBranches.map((branch) {
-                    return DropdownMenuItem(
-                      value: branch.id,
-                      child: Text(
-                        '${branch.name} (${branch.city})',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      final b = _branchService.getBranchByIdSync(val);
-                      setState(() {
-                        _selectedBranchId = val;
-                        _selectedBranchName = b.name;
-                      });
-                    }
-                  },
-                ),
                 const SizedBox(height: 16),
 
-                // Visit Date & Time Picker
-                Card(
-                  elevation: 0,
-                  color: Colors.grey.shade100,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Colors.grey.shade300),
+                // Clinical Visit Form Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  child: ListTile(
-                    leading: const Icon(Icons.event_available,
-                        color: Color(0xFF1E88E5)),
-                    title: const Text(
-                      'Visit Date & Time',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    subtitle: Text(
-                      '${_visitDate.day.toString().padLeft(2, '0')}/${_visitDate.month.toString().padLeft(2, '0')}/${_visitDate.year} at ${_visitDate.hour.toString().padLeft(2, '0')}:${_visitDate.minute.toString().padLeft(2, '0')}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Branch Selector
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedBranchId,
+                        decoration: const InputDecoration(
+                          labelText: 'Clinic Branch of Visit *',
+                          prefixIcon: Icon(Icons.location_city_rounded),
+                        ),
+                        items: _availableBranches.map((branch) {
+                          return DropdownMenuItem(
+                            value: branch.id,
+                            child: Text(
+                              '${branch.name} (${branch.city})',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            final b = _branchService.getBranchByIdSync(val);
+                            setState(() {
+                              _selectedBranchId = val;
+                              _selectedBranchName = b.name;
+                            });
+                          }
+                        },
                       ),
-                    ),
-                    trailing: TextButton.icon(
-                      onPressed: _pickVisitDate,
-                      icon: const Icon(Icons.edit_calendar, size: 16),
-                      label: const Text('Change'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                // Clinical Notes & Diagnosis
-                TextFormField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Clinical Notes & Diagnosis *',
-                    hintText:
-                        'e.g. Routine checkup, ear infection treated, dental scaling done.',
-                    prefixIcon: Icon(Icons.note_alt_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Please provide clinical notes'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-
-                // Vaccination Administered
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
-                      return _commonVaccines;
-                    }
-                    return _commonVaccines.where((v) => v
-                        .toLowerCase()
-                        .contains(textEditingValue.text.toLowerCase()));
-                  },
-                  onSelected: (String selection) {
-                    _vaccinationController.text = selection;
-                  },
-                  fieldViewBuilder:
-                      (context, controller, focusNode, onFieldSubmitted) {
-                    _vaccinationController.text = controller.text;
-                    return TextFormField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      decoration: const InputDecoration(
-                        labelText: 'Vaccination Administered (Optional)',
-                        hintText: 'Select or type vaccine name',
-                        prefixIcon: Icon(Icons.vaccines_outlined),
-                        border: OutlineInputBorder(),
+                      // Visit Date & Time Picker
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: ListTile(
+                          leading: const Icon(Icons.event_available_rounded,
+                              color: AppColors.primary),
+                          title: const Text(
+                            'Visit Date & Time',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${_visitDate.day.toString().padLeft(2, '0')}/${_visitDate.month.toString().padLeft(2, '0')}/${_visitDate.year} at ${_visitDate.hour.toString().padLeft(2, '0')}:${_visitDate.minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          trailing: TextButton.icon(
+                            onPressed: _pickVisitDate,
+                            icon: const Icon(Icons.edit_calendar_rounded, size: 16),
+                            label: const Text('Change'),
+                          ),
+                        ),
                       ),
-                      onChanged: (val) {
-                        _vaccinationController.text = val;
-                      },
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                // Prescribed Medications Section
-                const Text(
-                  'Prescribed Medications',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                      // Clinical Notes & Diagnosis
+                      TextFormField(
+                        controller: _notesController,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          labelText: 'Clinical Notes & Diagnosis *',
+                          hintText:
+                              'e.g. Physical exam normal. Mild ear infection observed, cleaning performed. Vaccinated against Rabies.',
+                          prefixIcon: Icon(Icons.description_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                        validator: (value) => value == null || value.trim().isEmpty
+                            ? 'Please provide clinical notes'
+                            : null,
+                      ),
+                      const SizedBox(height: 20),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: Autocomplete<String>(
+                      // Vaccination Administered
+                      Autocomplete<String>(
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return _commonVaccines;
+                          }
+                          return _commonVaccines.where((v) => v
+                              .toLowerCase()
+                              .contains(textEditingValue.text.toLowerCase()));
+                        },
+                        onSelected: (String selection) {
+                          _vaccinationController.text = selection;
+                        },
+                        fieldViewBuilder:
+                            (context, controller, focusNode, onFieldSubmitted) {
+                          _vaccinationController.text = controller.text;
+                          return TextFormField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Vaccination Administered (Optional)',
+                              hintText: 'Select or type vaccine name',
+                              prefixIcon: Icon(Icons.vaccines_outlined),
+                            ),
+                            onChanged: (val) {
+                              _vaccinationController.text = val;
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Prescribed Medications Builder
+                      const Text(
+                        'PRESCRIBED MEDICATIONS',
+                        style: AppTextStyles.overline,
+                      ),
+                      const SizedBox(height: 8),
+
+                      Autocomplete<String>(
                         optionsBuilder: (TextEditingValue textEditingValue) {
                           if (textEditingValue.text.isEmpty) {
                             return _commonMedications;
@@ -400,11 +465,18 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                           return TextFormField(
                             controller: controller,
                             focusNode: focusNode,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Add Medication',
-                              hintText: 'Type or pick from common list',
-                              prefixIcon: Icon(Icons.medication_outlined),
-                              border: OutlineInputBorder(),
+                              hintText: 'Type dosage or pick common item',
+                              prefixIcon: const Icon(Icons.medication_outlined),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.add_circle_outline_rounded,
+                                    color: AppColors.primary),
+                                onPressed: () {
+                                  _addMedication(controller.text);
+                                  controller.clear();
+                                },
+                              ),
                             ),
                             onFieldSubmitted: (val) {
                               _addMedication(val);
@@ -413,120 +485,130 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                           );
                         },
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+                      const SizedBox(height: 10),
 
-                // Chips display
-                if (_medicationsList.isNotEmpty)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: _medicationsList.map((med) {
-                      return Chip(
-                        avatar:
-                            const Icon(Icons.check_circle_outline, size: 16),
-                        label: Text(med),
-                        deleteIcon: const Icon(Icons.cancel, size: 18),
-                        onDeleted: () {
-                          setState(() {
-                            _medicationsList.remove(med);
-                          });
-                        },
-                      );
-                    }).toList(),
-                  )
-                else
-                  const Text(
-                    'No medications added yet for this visit.',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                      // Medications Chips
+                      if (_medicationsList.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: _medicationsList.map((med) {
+                            return Chip(
+                              backgroundColor: AppColors.primaryUltraSoft,
+                              side: const BorderSide(color: AppColors.primarySoft),
+                              avatar: const Icon(Icons.medication_rounded,
+                                  size: 16, color: AppColors.primary),
+                              label: Text(
+                                med,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryDark,
+                                ),
+                              ),
+                              deleteIcon: const Icon(Icons.cancel_rounded,
+                                  size: 16, color: AppColors.textMuted),
+                              onDeleted: () {
+                                setState(() {
+                                  _medicationsList.remove(med);
+                                });
+                              },
+                            );
+                          }).toList(),
+                        )
+                      else
+                        const Text(
+                          'No medications prescribed for this visit.',
+                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Next Follow-Up Date Scheduler
+                      const Text(
+                        'NEXT FOLLOW-UP DATE',
+                        style: AppTextStyles.overline,
+                      ),
+                      const SizedBox(height: 8),
+
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: ListTile(
+                          leading: const Icon(Icons.schedule_rounded,
+                              color: AppColors.warning),
+                          title: Text(
+                            _nextFollowUpDate == null
+                                ? 'No Follow-Up Scheduled'
+                                : 'Scheduled: ${_nextFollowUpDate!.day}/${_nextFollowUpDate!.month}/${_nextFollowUpDate!.year}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _nextFollowUpDate != null
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: _nextFollowUpDate != null
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_nextFollowUpDate != null)
+                                IconButton(
+                                  icon: const Icon(Icons.clear_rounded,
+                                      color: AppColors.textMuted, size: 18),
+                                  onPressed: () {
+                                    setState(() {
+                                      _nextFollowUpDate = null;
+                                    });
+                                  },
+                                ),
+                              ElevatedButton(
+                                onPressed: _pickFollowUpDate,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text('Pick Date',
+                                    style: TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-
+                ),
                 const SizedBox(height: 24),
 
-                // Next Follow-Up Date
-                const Text(
-                  'Next Follow-Up Date',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                Card(
-                  elevation: 0,
-                  color: Colors.grey.shade100,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  child: ListTile(
-                    leading: const Icon(Icons.event_outlined,
-                        color: Color(0xFF1E88E5)),
-                    title: Text(
-                      _nextFollowUpDate == null
-                          ? 'No Follow-Up Scheduled'
-                          : 'Scheduled: ${_nextFollowUpDate!.day}/${_nextFollowUpDate!.month}/${_nextFollowUpDate!.year}',
-                      style: TextStyle(
-                        fontWeight: _nextFollowUpDate != null
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_nextFollowUpDate != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.grey),
-                            onPressed: () {
-                              setState(() {
-                                _nextFollowUpDate = null;
-                              });
-                            },
-                          ),
-                        ElevatedButton(
-                          onPressed: _pickFollowUpDate,
-                          child: const Text('Pick Date'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Submit Button
+                // Submit Action
                 SizedBox(
-                  height: 52,
+                  height: 50,
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _submitVisit,
-                    icon: const Icon(Icons.cloud_upload_outlined),
+                    icon: const Icon(Icons.cloud_upload_rounded),
                     label: _isLoading
                         ? const SizedBox(
                             height: 22,
                             width: 22,
                             child: CircularProgressIndicator(
                               color: Colors.white,
-                              strokeWidth: 2.5,
+                              strokeWidth: 2.2,
                             ),
                           )
                         : const Text(
-                            'Save & Sync Visit Record',
+                            'Save & Synchronize Visit',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E88E5),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
                   ),
                 ),
               ],

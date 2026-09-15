@@ -3,6 +3,11 @@ import 'package:vetsync/models/pet.dart';
 import 'package:vetsync/models/visit.dart';
 import 'package:vetsync/services/visit_service.dart';
 import 'package:vetsync/screen/add_visit_screen.dart';
+import 'package:vetsync/theme/app_colors.dart';
+import 'package:vetsync/theme/app_text_styles.dart';
+import 'package:vetsync/widgets/clinic_badge.dart';
+import 'package:vetsync/widgets/medical_timeline_tile.dart';
+import 'package:vetsync/widgets/safety_flag_card.dart';
 
 class PetDetailsScreen extends StatefulWidget {
   final Pet pet;
@@ -16,39 +21,22 @@ class PetDetailsScreen extends StatefulWidget {
 class _PetDetailsScreenState extends State<PetDetailsScreen> {
   final VisitService _visitService = VisitService();
 
-  String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = months[dt.month - 1];
-    final year = dt.year;
-
-    final hourNum = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
-    final minuteStr = dt.minute.toString().padLeft(2, '0');
-    final amPm = dt.hour >= 12 ? 'PM' : 'AM';
-
-    return '$day $month $year, $hourNum:$minuteStr $amPm';
-  }
-
-  String _formatDateOnly(DateTime dt) {
-    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+  IconData _getSpeciesIcon(String species) {
+    final s = species.toLowerCase();
+    if (s.contains('dog') || s.contains('canine')) {
+      return Icons.pets_rounded;
+    } else if (s.contains('cat') || s.contains('feline')) {
+      return Icons.cruelty_free_rounded;
+    } else if (s.contains('bird') || s.contains('avian')) {
+      return Icons.flutter_dash_rounded;
+    }
+    return Icons.pets_rounded;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('${widget.pet.name}\'s Medical File'),
       ),
@@ -61,9 +49,12 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error loading visits: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Error loading medical records: ${snapshot.error}',
+                  style: const TextStyle(color: AppColors.error),
+                ),
               ),
             );
           }
@@ -82,47 +73,69 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                 const SizedBox(height: 16),
 
                 // 2. Clinical Safety Flags Section
-                _buildSafetyFlagsSection(safetyReport),
+                SafetyFlagCard(report: safetyReport),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                // 3. Section Title
+                // 3. Section Title & Cross-Branch Visit Count
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Cross-Branch Visit Timeline',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'CROSS-BRANCH MEDICAL TIMELINE',
+                          style: AppTextStyles.overline,
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Synchronized Clinical History',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
-                    Chip(
-                      label: Text('${visits.length} Visits'),
-                      backgroundColor: Colors.blue.shade50,
-                      labelStyle: const TextStyle(
-                        color: Color(0xFF1E88E5),
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryUltraSoft,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.primarySoft),
+                      ),
+                      child: Text(
+                        '${visits.length} Visits',
+                        style: const TextStyle(
+                          color: AppColors.primaryDark,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // 4. Timeline list or Empty state
+                // 4. Connected Timeline List
                 if (visits.isEmpty)
                   _buildEmptyVisitsState()
                 else
-                  ListView.separated(
+                  ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: visits.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      return _buildVisitCard(visits[index]);
+                      return MedicalTimelineTile(
+                        visit: visits[index],
+                        isFirst: index == 0,
+                        isLast: index == visits.length - 1,
+                      );
                     },
                   ),
+                const SizedBox(height: 60), // Padding for FAB
               ],
             ),
           );
@@ -137,85 +150,123 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             ),
           );
         },
-        icon: const Icon(Icons.add_circle_outline),
-        label: const Text('Add Visit'),
-        backgroundColor: const Color(0xFF1E88E5),
-        foregroundColor: Colors.white,
+        icon: const Icon(Icons.note_add_rounded),
+        label: const Text('Add Clinical Visit'),
       ),
     );
   }
 
   Widget _buildPetProfileCard() {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xFF1E88E5).withAlpha(30),
-                  child: const Icon(
-                    Icons.pets,
-                    color: Color(0xFF1E88E5),
-                    size: 32,
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryUltraSoft,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primarySoft, width: 1.5),
+                  ),
+                  child: Icon(
+                    _getSpeciesIcon(widget.pet.species),
+                    color: AppColors.primary,
+                    size: 30,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.pet.name,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.pet.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${widget.pet.age} Yrs • ${widget.pet.gender}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 3),
                       Text(
                         '${widget.pet.species} • ${widget.pet.breed}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey.shade700,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Chip(
-                  label: Text('${widget.pet.age} Yrs'),
-                  backgroundColor: Colors.grey.shade200,
-                ),
               ],
             ),
-            const Divider(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(height: 1, color: AppColors.borderLight),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person_outline,
-                        size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
+                    const Icon(Icons.person_outline_rounded,
+                        size: 15, color: AppColors.textMuted),
+                    const SizedBox(width: 6),
                     Text(
-                      'Owner: ${widget.pet.ownerName}',
+                      'Guardian: ${widget.pet.ownerName}',
                       style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 13),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.transgender, size: 16, color: Colors.grey),
+                    const Icon(Icons.fingerprint_rounded,
+                        size: 15, color: AppColors.textMuted),
                     const SizedBox(width: 4),
                     Text(
-                      widget.pet.gender,
+                      'ID: ${widget.pet.id.length > 8 ? widget.pet.id.substring(0, 8) : widget.pet.id}',
                       style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 13),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -224,370 +275,22 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.apartment_rounded,
-                    size: 16, color: Color(0xFF1E88E5)),
-                const SizedBox(width: 6),
-                Text(
+                const Text(
                   'Home Clinic: ',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                ),
-                Expanded(
-                  child: Text(
-                    widget.pet.branchName.isNotEmpty
-                        ? widget.pet.branchName
-                        : widget.pet.branchId,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E88E5),
-                    ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
                   ),
+                ),
+                ClinicBadge(
+                  branchName: widget.pet.branchName.isNotEmpty
+                      ? widget.pet.branchName
+                      : widget.pet.branchId,
+                  isCompact: true,
+                  isHighlighted: true,
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSafetyFlagsSection(SafetyReport report) {
-    if (!report.isFollowUpOverdue && report.recentMedications.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.green.shade300),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: Colors.green, size: 22),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Clinical Status: Up to date. No overdue follow-ups or recent cross-branch medication risks.',
-                style: TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        // ⚠️ Overdue Follow-Up Flag
-        if (report.isFollowUpOverdue && report.overdueDate != null) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.amber.shade400, width: 1.5),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: Colors.deepOrange, size: 26),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'OVERDUE FOLLOW-UP ALERT',
-                        style: TextStyle(
-                          color: Colors.deepOrange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Scheduled follow-up on ${_formatDateOnly(report.overdueDate!)} was missed.',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-
-        // 💊 Recent Medication Flag
-        if (report.recentMedications.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.purple.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.purple.shade300, width: 1.5),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.medication_liquid_sharp,
-                    color: Colors.purple, size: 26),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'RECENT MEDICATION FLAG (< 14 Days)',
-                        style: TextStyle(
-                          color: Colors.purple,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Check previous branch prescriptions to avoid duplicate dosage:',
-                        style: TextStyle(fontSize: 12, color: Colors.black87),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: report.recentMedications.map((med) {
-                          final branchDisplay = med.branchName.isNotEmpty
-                              ? med.branchName
-                              : med.branchId;
-                          return Chip(
-                            backgroundColor: Colors.white,
-                            side: BorderSide(color: Colors.purple.shade200),
-                            label: Text(
-                              '${med.medicationName} ($branchDisplay)',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildVisitCard(Visit visit) {
-    final branchDisplay =
-        visit.branchName.isNotEmpty ? visit.branchName : visit.branchId;
-
-    return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Date & Time + Branch Badge
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.event_available,
-                              size: 17, color: Color(0xFF1E88E5)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _formatDateTime(visit.date),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(Icons.person_pin,
-                              size: 15, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Attended by: Dr. ${visit.vetName}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade800,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Branch Badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E88E5).withAlpha(25),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF1E88E5).withAlpha(50),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.location_city_rounded,
-                        size: 14,
-                        color: Color(0xFF1E88E5),
-                      ),
-                      const SizedBox(width: 5),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 140),
-                        child: Text(
-                          branchDisplay,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E88E5),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 20),
-
-            // Clinical Diagnosis / Notes
-            const Text(
-              'Diagnosis & Clinical Notes:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              visit.notes,
-              style: const TextStyle(fontSize: 14, height: 1.3),
-            ),
-
-            // Vaccination Administered (if any)
-            if (visit.vaccination.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Icon(Icons.vaccines, size: 18, color: Colors.teal),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Vaccine:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  const SizedBox(width: 6),
-                  Chip(
-                    backgroundColor: Colors.teal.shade50,
-                    side: BorderSide(color: Colors.teal.shade200),
-                    label: Text(
-                      visit.vaccination,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.teal,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-
-            // Medications Prescribed
-            if (visit.medications.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'Prescribed Medications:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: visit.medications.map((m) {
-                  return Chip(
-                    backgroundColor: Colors.blue.shade50,
-                    side: BorderSide(color: Colors.blue.shade200),
-                    label: Text(
-                      m,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF1E88E5),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-
-            // Follow-Up Date (if scheduled)
-            if (visit.nextFollowUpDate != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.schedule, size: 16, color: Colors.orange),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Next Follow-Up: ${_formatDateOnly(visit.nextFollowUpDate!)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -596,28 +299,43 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
   Widget _buildEmptyVisitsState() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Column(
         children: [
-          Icon(Icons.history_edu_outlined,
-              size: 56, color: Colors.grey.shade400),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: const BoxDecoration(
+              color: AppColors.primaryUltraSoft,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.history_edu_rounded,
+              size: 32,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 14),
           const Text(
-            'No Clinical Visits Yet',
+            'No Clinical Visits Recorded Yet',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'When any clinic branch records a visit, it will appear here in real-time with full doctor & branch details.',
+          const Text(
+            'When any clinic branch records an examination, diagnosis, or prescription, it will appear here in real-time.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
+              fontSize: 12,
+              color: AppColors.textMuted,
+              height: 1.4,
             ),
           ),
         ],
