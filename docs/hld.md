@@ -1,215 +1,161 @@
-# VetSync — High-Level Design (HLD)
+# 🏗️ High-Level Design (HLD) — VetSync
 
-## 1. Project Overview
-
-VetSync is a centralized veterinary health-record mobile application designed for veterinary clinic chains operating across multiple branches.
-
-Currently, each clinic branch may maintain its own vaccination history and treatment records. When a pet visits another branch, the attending veterinarian may not have access to the pet's previous medical history.
-
-VetSync solves this problem by providing a centralized system where authorized veterinary staff can access and manage a pet's medical records across clinic branches.
+**System:** VetSync Centralized Veterinary Health-Record Platform  
+**Document Version:** 2.0  
+**Target Architecture:** Flutter Client + Google Firebase Cloud Backend  
+**Author:** Nirbhay Jakhar (Team Pioneers)  
 
 ---
 
-# 2. Problem Statement
+## 1. Project Overview & Architectural Topology
 
-A chain of veterinary clinics operates across multiple branches, but each clinic maintains its own records for vaccination history and treatment notes.
+VetSync is a centralized veterinary health-record mobile application designed for veterinary clinic chains operating across multiple regional branches.
 
-When a pet owner visits a different branch, the attending vet has no access to prior history, increasing the risk of:
+The application follows a clean, reactive Flutter + Firebase architecture, decoupling UI components, business logic services, data models, and cloud persistence.
 
-- Duplicate medication
-- Duplicate vaccinations
-- Missed follow-ups
-- Incomplete treatment decisions
-- Loss of important medical history
-- Poor coordination between clinic branches
+```mermaid
+graph TD
+    subgraph Client_Layer [Flutter Client Application]
+        UI[Presentation Layer: Screens & Widgets]
+        Theme[AppTheme & Design Tokens]
+        Services[Business Logic & Service Layer]
+        Models[Data Models: Pet, Visit, Branch]
+        UI --> Theme
+        UI --> Services
+        Services --> Models
+    end
 
-VetSync provides a centralized digital record for every pet so authorized veterinary staff can access its medical history regardless of which branch previously treated the pet.
+    subgraph Firebase_Cloud_Layer [Firebase Cloud Platform]
+        Auth[Firebase Authentication]
+        Firestore[(Cloud Firestore NoSQL)]
+        Rules[Firestore Security Rules]
+    end
 
----
+    subgraph External_Integrations [External APIs]
+        Brevo[Brevo REST API - OTP Email Delivery]
+    end
 
-# 3. Goals
-
-The main goals of VetSync are:
-
-1. Centralize veterinary medical records.
-2. Allow authorized veterinary staff to access pet history.
-3. Maintain vaccination history.
-4. Maintain treatment history.
-5. Allow vets to add and update medical records.
-6. Allow vets to search for pets.
-7. Reduce duplicate medication and vaccinations.
-8. Reduce missed follow-ups.
-9. Provide a simple mobile-first interface.
-10. Protect medical records using authentication and database security rules.
-
----
-
-# 4. Target Users
-
-## Primary Users
-
-### Veterinary Staff / Veterinarians
-
-They can:
-
-- Create an account
-- Log in
-- View pets
-- Search for pets
-- Add pets
-- View pet details
-- View vaccination history
-- Add vaccination records
-- View treatment history
-- Add treatment records
-- Update records
-
-## Future Users
-
-### Pet Owners
-
-Potential future functionality:
-
-- View their pet's medical history
-- View upcoming vaccinations
-- View treatment records
-- Receive follow-up reminders
-
-Pet-owner functionality is outside the initial MVP unless required by the project scope.
+    Services -->|Auth & Session Persistence| Auth
+    Services -->|Real-time Snapshot Streams| Firestore
+    Services -->|Send 6-digit OTP Code| Brevo
+    Firestore --- Rules
+```
 
 ---
 
-# 5. MVP Scope
+## 2. Architectural Layers
 
-The first version of VetSync will focus on the core problem.
+### 2.1 Presentation & UI Layer
+- **Workstation Shell (`MainNavigationScreen`):** Manages a 4-tab `IndexedStack` keeping widget state persistent across tab transitions (**Dashboard**, **Patient Directory**, **Safety Alerts Hub**, **Doctor Profile**).
+- **Theme & Design System (`lib/theme/`):** Centralizes all color tokens (`AppColors`), typography scales (`AppTextStyles`), elevation styles, button themes, and input decorations in `AppTheme`.
+- **Component Library (`lib/widgets/`):** Reusable medical UI components (`ClinicBadge`, `SafetyFlagCard`, `MedicalTimelineTile`, `StatCard`, `EmptyStateView`).
 
-### Authentication
+### 2.2 Business Logic & Service Layer (`lib/services/`)
+- **`AuthService`:** Manages user registration, email/password authentication, persistent auth streams (`authStateChanges`), session termination, and OTP integration.
+- **`PetService`:** Handles patient document creation and real-time streaming (`streamAllPets()`, `streamPetsByBranch()`, `getPetById()`).
+- **`VisitService`:** Manages cross-branch visit creation, real-time timeline streaming (`streamVisitsForPet()`), and runs the in-memory **Clinical Safety Flag Engine** (`evaluateSafetyFlags()`).
+- **`BranchService`:** Streams clinic locations, provides fallback sync for offline regional clinics, and updates the attending veterinarian's active station in the `vets` Firestore collection.
+- **`OtpService`:** Generates cryptographic 6-digit verification codes, handles REST delivery via Brevo with resilient fallback, verifies code validity with TTL expiration, and issues signed reset tokens.
 
-- Signup
-- Login
-- Logout
-- Persistent login
-
-### Pet Management
-
-- View pets
-- Add pet
-- View pet details
-- Search pets
-
-### Medical Records
-
-- View vaccination history
-- Add vaccination record
-- View treatment history
-- Add treatment record
-
-### Security
-
-- Firebase Authentication
-- Firestore Security Rules
-- Authenticated access to medical data
+### 2.3 Data Layer & Models (`lib/models/`)
+- Strongly-typed Dart data classes (`Pet`, `Visit`, `Branch`, `SafetyReport`, `RecentMedicationInfo`, `OtpResult`) equipped with `fromFirestore()`, `toMap()`, and factory deserializers.
 
 ---
 
-# 6. Technology Stack
+## 3. Core Sequence Flows
 
-## Frontend
+### 3.1 Authentication & Reactive Session Gate (`AuthWrapper`)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Doctor
+    participant App as Flutter App Root
+    participant Wrapper as AuthWrapper
+    participant Auth as AuthService (Firebase Auth)
+    participant Nav as MainNavigationScreen
+    participant Login as LoginScreen
 
-### Flutter
+    App->>Wrapper: Initialize App Root
+    Wrapper->>Auth: Listen to authStateChanges Stream
+    alt User is Authenticated
+        Auth-->>Wrapper: Yields User object
+        Wrapper->>Nav: Render MainNavigationScreen
+    else User is Unauthenticated
+        Auth-->>Wrapper: Yields null
+        Wrapper->>Login: Render LoginScreen
+    end
+    Doctor->>Login: Submits credentials
+    Login->>Auth: signInWithEmail(email, password)
+    Auth-->>Wrapper: Emits updated User stream event
+    Wrapper->>Nav: Auto-routes to Dashboard
+```
 
-Flutter will be used to build the cross-platform mobile application.
+### 3.2 Real-time Cross-Branch Visit Recording & Timeline Sync
+```mermaid
+sequenceDiagram
+    autonumber
+    actor DrA as Attending Vet (Delhi Branch)
+    actor DrB as Attending Vet (Mumbai Branch)
+    participant UI as AddVisitScreen
+    participant VisitSvc as VisitService
+    participant Firestore as Cloud Firestore ('visits')
+    participant Timeline as PetDetailsScreen (Timeline)
 
-Flutter is responsible for:
+    DrA->>UI: Fills Diagnosis, Meds, Vaccines, Follow-Up
+    DrA->>UI: Clicks "Save & Synchronize Visit"
+    UI->>VisitSvc: addVisit(petId, branchId, vetId, notes, meds, ...)
+    VisitSvc->>Firestore: docRef.set(visit.toMap())
+    Firestore-->>VisitSvc: Write Ack (Server Timestamp)
+    UI-->>DrA: Display Success Snackbar & Pop Form
+    Note over Firestore,Timeline: Firestore Snapshot Listener fires instantly
+    Firestore-->>Timeline: Snapshot update emitted to StreamBuilder
+    Timeline->>VisitSvc: evaluateSafetyFlags(visits)
+    Timeline-->>DrB: Connected Timeline & Safety Flags update in Real Time
+```
 
-- UI
-- Navigation
-- Forms
-- User interaction
-- State management
-- Displaying Firebase data
-
----
-
-## Programming Language
-
-### Dart
-
-Dart is used to write the Flutter application.
-
-It will be used for:
-
-- Widgets
-- Models
-- Services
-- Business logic
-- Async operations
-- Firebase integration
-
----
-
-## Backend / Cloud Platform
-
-### Firebase
-
-Firebase will provide the backend infrastructure.
-
-The main Firebase services used are:
-
-### Firebase Authentication
-
-Used for:
-
-- Signup
-- Login
-- Logout
-- User identity
-- Authentication state
-
-### Cloud Firestore
-
-Used for:
-
-- Users
-- Clinics
-- Pets
-- Vaccinations
-- Treatments
-
-### Firebase Storage
-
-Used for:
-
-- Pet images
-- Medical documents
-- Other supported files
+### 3.3 Clinical Safety Flag Engine
+```mermaid
+flowchart TD
+    Start([Receive Visits for Pet]) --> Sort[Sort Visits by Date Descending]
+    Sort --> CheckFollowUp{Latest Follow-Up in Past?}
+    CheckFollowUp -- Yes --> SetOverdue[Set isFollowUpOverdue = true & extract overdueDate]
+    CheckFollowUp -- No --> CheckMeds
+    SetOverdue --> CheckMeds{Any Visits in Past 14 Days?}
+    CheckMeds -- Yes --> ExtractMeds[Extract distinct medication names, prescribing branch, and doctor]
+    CheckMeds -- No --> BuildReport
+    ExtractMeds --> BuildReport[Construct SafetyReport]
+    BuildReport --> RenderUI[Render SafetyFlagCard & Alerts Hub]
+```
 
 ---
 
-# 7. High-Level Architecture
+## 4. Database Schema & Firestore Security
 
-The application follows a Flutter + Firebase architecture.
+### 4.1 Collection Relationships
+```
+[branches] (1) <─────── (N) [vets] (Active Branch Attribution)
+     │
+     │ (Attributed Home Branch)
+     ▼
+  [pets] (1) <────────── (N) [visits] (Cross-Branch Visits)
+```
 
-```text
-                    VETSYNC
-                       |
-                       v
-                Flutter Mobile App
-                       |
-              +--------+--------+
-              |        |        |
-              v        v        v
-              UI     Services  Models
-              |        |        |
-              +--------+--------+
-                       |
-                       v
-                  Firebase SDK
-                       |
-       +---------------+---------------+
-       |               |               |
-       v               v               v
- Firebase Auth    Cloud Firestore   Firebase Storage
-       |               |               |
-       v               v               v
-    Users          Medical Data      Files
+### 4.2 Security Rules
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+---
+
+## 5. Non-Functional Attributes
+
+1. **Real-Time Responsiveness:** `StreamBuilder` pipelines reactively update medical charts within milliseconds of a Firestore write from any clinic location.
+2. **Offline Resilience:** Static default branches provide uninterrupted local fallback if cloud network connectivity drops.
+3. **Auditability:** Every recorded visit permanently encapsulates the timestamp, attending doctor name, and branch attribution.
