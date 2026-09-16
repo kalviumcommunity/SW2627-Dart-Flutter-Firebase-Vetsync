@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vetsync/models/branch.dart';
 import 'package:vetsync/models/pet.dart';
 import 'package:vetsync/models/visit.dart';
+import 'package:vetsync/services/visit_service.dart';
 import 'package:vetsync/screen/forgot_password_screen.dart';
 import 'package:vetsync/screen/branch_selection_screen.dart';
+import 'package:vetsync/screen/login_screen.dart';
+import 'package:vetsync/screen/signup_screen.dart';
 
 void main() {
   testWidgets('ForgotPasswordScreen renders email input and send OTP button',
@@ -116,4 +119,75 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Delhi Central Clinic'), findsOneWidget);
   });
+
+  test('VisitService evaluateSafetyFlags detects overdue follow-ups and <14d medications', () {
+    final visitService = VisitService();
+    final now = DateTime.now();
+
+    final visit1 = Visit(
+      id: 'v1',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      branchName: 'Delhi Central Clinic',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now.subtract(const Duration(days: 5)),
+      notes: 'Initial evaluation',
+      medications: ['Amoxicillin 250mg'],
+      vaccination: 'Rabies',
+      nextFollowUpDate: now.subtract(const Duration(days: 1)), // Overdue
+    );
+
+    final visit2 = Visit(
+      id: 'v2',
+      petId: 'pet1',
+      branchId: 'BRANCH_MUMBAI',
+      branchName: 'Mumbai Pet Specialty Hospital',
+      vetId: 'vet2',
+      vetName: 'Dr. Patel',
+      date: now.subtract(const Duration(days: 20)),
+      notes: 'Old checkup',
+      medications: ['Old Med 50mg'],
+      vaccination: '',
+      nextFollowUpDate: null,
+    );
+
+    final report = visitService.evaluateSafetyFlags([visit1, visit2]);
+
+    expect(report.isFollowUpOverdue, true);
+    expect(report.overdueDate, isNotNull);
+    expect(report.recentMedications.length, 1);
+    expect(report.recentMedications.first.medicationName, 'Amoxicillin 250mg');
+    expect(report.recentMedications.first.branchName, 'Delhi Central Clinic');
+  });
+
+  testWidgets('LoginScreen renders credentials form and sign in CTA',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: LoginScreen(),
+      ),
+    );
+
+    expect(find.text('VetSync'), findsOneWidget);
+    expect(find.text('Staff Medical Portal'), findsOneWidget);
+    expect(find.text('Sign In to VetSync'), findsOneWidget);
+    expect(find.text('Register Account'), findsOneWidget);
+  });
+
+  testWidgets('SignupScreen renders full registration inputs and branch dropdown',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SignupScreen(),
+      ),
+    );
+
+    expect(find.text('Staff Registration'), findsOneWidget);
+    expect(find.text('Create Staff Account'), findsOneWidget);
+    expect(find.text('Create Account'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+  });
 }
+
+

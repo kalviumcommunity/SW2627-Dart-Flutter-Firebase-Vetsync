@@ -33,8 +33,12 @@ class RecentMedicationInfo {
 
 /// Service for managing cross-branch pet visit records and safety flags.
 class VisitService {
-  final CollectionReference _visitsCollection =
-      FirebaseFirestore.instance.collection('visits');
+  final FirebaseFirestore? _customFirestore;
+
+  VisitService({FirebaseFirestore? firestore}) : _customFirestore = firestore;
+
+  CollectionReference get _visitsCollection =>
+      (_customFirestore ?? FirebaseFirestore.instance).collection('visits');
 
   /// Streams visits for a specific pet in real-time, newest visits first.
   Stream<List<Visit>> streamVisitsForPet(String petId) {
