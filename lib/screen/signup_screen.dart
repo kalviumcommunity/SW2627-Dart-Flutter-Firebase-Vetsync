@@ -16,7 +16,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final AuthService _authService = AuthService();
   final BranchService _branchService = BranchService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -68,20 +68,27 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+
       // 1. Create user in Firebase Authentication
       final UserCredential userCredential = await _authService.signUpWithEmail(
-        email: _emailController.text,
+        email: email,
         password: _passwordController.text,
       );
 
       final User? user = userCredential.user;
 
-      // 2. Save veterinary staff profile into Firestore collection 'vets'
+      // 2. Save veterinary staff profile into Firestore collection 'vets' and update profile displayName
       if (user != null) {
+        try {
+          await user.updateDisplayName(name);
+        } catch (_) {}
+
         await _firestore.collection('vets').doc(user.uid).set({
           'uid': user.uid,
-          'name': _nameController.text.trim(),
-          'email': _emailController.text.trim(),
+          'name': name,
+          'email': email,
           'branchID': _selectedBranchId,
           'branchName': _selectedBranchName,
           'role': 'veterinarian',
@@ -112,11 +119,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
       String message = 'Registration failed. Please try again.';
       if (e.code == 'email-already-in-use') {
-        message = 'An account already exists with this email address.';
+        message = 'An account already exists with this email address. Please sign in instead.';
       } else if (e.code == 'weak-password') {
-        message = 'Password is too weak. Please choose a stronger password.';
+        message = 'Password is too weak. Please choose a password with at least 6 characters.';
       } else if (e.code == 'invalid-email') {
         message = 'Please enter a valid email address.';
+      } else if (e.code == 'operation-not-allowed') {
+        message = 'Email/password accounts are not enabled. Please contact administrator.';
+      } else if (e.code == 'network-request-failed') {
+        message = 'Network connection error. Please verify your internet connection.';
       }
 
       setState(() {
@@ -287,6 +298,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           // Primary Branch Dropdown
                           DropdownButtonFormField<String>(
                             initialValue: _selectedBranchId,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Primary Clinic Branch',
                               prefixIcon: Icon(Icons.apartment_rounded),

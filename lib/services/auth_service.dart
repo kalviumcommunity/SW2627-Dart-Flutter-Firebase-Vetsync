@@ -1,18 +1,23 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vetsync/services/otp_service.dart';
 
 /// Service responsible for managing all authentication operations in VetSync.
 class AuthService {
   final FirebaseAuth? _customAuth;
+  final FirebaseFirestore? _customFirestore;
   final OtpService _otpService;
 
   AuthService({
     FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
     OtpService? otpService,
   })  : _customAuth = auth,
+        _customFirestore = firestore,
         _otpService = otpService ?? OtpService();
 
   FirebaseAuth get _auth => _customAuth ?? FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => _customFirestore ?? FirebaseFirestore.instance;
 
   /// Stream of authentication state changes.
   /// Emits [User] when logged in, and [null] when logged out.
@@ -21,6 +26,29 @@ class AuthService {
   /// Gets the currently logged in user (synchronous snapshot).
   User? get currentUser => _auth.currentUser;
 
+  /// Checks whether a veterinary staff profile exists for the given [uid] in Firestore.
+  Future<bool> isVetRegistered(String uid) async {
+    try {
+      final doc = await _firestore.collection('vets').doc(uid).get();
+      return doc.exists;
+    } catch (_) {
+      // In offline/test conditions where Firestore might be mocked
+      return false;
+    }
+  }
+
+  /// Fetches the veterinary staff profile document for the given [uid].
+  Future<Map<String, dynamic>?> getVetProfile(String uid) async {
+    try {
+      final doc = await _firestore.collection('vets').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data();
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Registers a new veterinary staff member with email and password.
   Future<UserCredential> signUpWithEmail({
@@ -87,4 +115,5 @@ class AuthService {
     await _auth.signOut();
   }
 }
+
 

@@ -187,6 +187,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
                       // Registering Clinic Branch
                       DropdownButtonFormField<String>(
                         initialValue: _selectedBranchId,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Registering Clinic Branch *',
                           prefixIcon: Icon(Icons.apartment_rounded),

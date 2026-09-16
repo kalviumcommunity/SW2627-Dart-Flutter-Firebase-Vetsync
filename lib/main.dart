@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -32,7 +33,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Reactively listens to user authentication changes
+/// Reactively listens to user authentication and registration changes
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -42,9 +43,9 @@ class AuthWrapper extends StatelessWidget {
 
     return StreamBuilder<User?>(
       stream: authService.authStateChanges,
-      builder: (context, snapshot) {
+      builder: (context, authSnapshot) {
         // While Firebase is determining initial auth state
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),
@@ -52,9 +53,35 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // If user is authenticated, direct to MainNavigationScreen
-        if (snapshot.hasData && snapshot.data != null) {
-          return const MainNavigationScreen();
+        final user = authSnapshot.data;
+
+        // If user is authenticated, verify their staff record exists in Firestore 'vets' collection
+        if (user != null) {
+          return StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('vets')
+                .doc(user.uid)
+                .snapshots(),
+            builder: (context, vetSnapshot) {
+              if (vetSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              // Only grant access if the doctor has a registered profile in Firestore
+              if (vetSnapshot.hasData &&
+                  vetSnapshot.data != null &&
+                  vetSnapshot.data!.exists) {
+                return const MainNavigationScreen();
+              }
+
+              // Otherwise, account is not registered as veterinary staff
+              return const LoginScreen();
+            },
+          );
         }
 
         // Otherwise, show LoginScreen
@@ -63,3 +90,4 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
+

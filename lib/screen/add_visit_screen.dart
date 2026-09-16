@@ -331,6 +331,7 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
                       // Branch Selector
                       DropdownButtonFormField<String>(
                         initialValue: _selectedBranchId,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Clinic Branch of Visit *',
                           prefixIcon: Icon(Icons.location_city_rounded),
