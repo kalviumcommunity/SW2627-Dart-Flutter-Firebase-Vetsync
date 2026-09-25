@@ -216,10 +216,26 @@ SafetyReport evaluateSafetyFlags(List<Visit> visits) {
   bool isOverdue = false;
   DateTime? overdueDate;
 
-  for (final visit in visits) {
-    if (visit.nextFollowUpDate != null && visit.nextFollowUpDate!.isBefore(now)) {
-      isOverdue = true;
-      overdueDate = visit.nextFollowUpDate;
+  // Ensure visits are sorted chronologically descending (newest visit first)
+  final sortedVisits = List<Visit>.from(visits)
+    ..sort((a, b) => b.date.compareTo(a.date));
+
+  // Check only the most recent visit that scheduled a follow-up
+  for (final visit in sortedVisits) {
+    if (visit.nextFollowUpDate != null) {
+      if (visit.nextFollowUpDate!.isBefore(now)) {
+        // Verify whether subsequent visits have occurred since that follow-up date
+        final hasSubsequentVisit = sortedVisits.any(
+          (v) =>
+              v.date.isAfter(visit.date) &&
+              _isSameDayOrAfter(v.date, visit.nextFollowUpDate!),
+        );
+
+        if (!hasSubsequentVisit) {
+          isOverdue = true;
+          overdueDate = visit.nextFollowUpDate;
+        }
+      }
       break;
     }
   }
