@@ -49,13 +49,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String message = 'Login failed. Please check your credentials.';
       if (e.code == 'user-not-found') {
-        message = 'No account found with this email address.';
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'No registered account found with this email address.';
+      } else if (e.code == 'wrong-password' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'invalid-password') {
         message = 'Incorrect email or password.';
       } else if (e.code == 'invalid-email') {
         message = 'Please enter a valid email address.';
       } else if (e.code == 'user-disabled') {
-        message = 'This staff account has been disabled.';
+        message = 'This veterinary staff account has been disabled.';
+      } else if (e.code == 'too-many-requests') {
+        message =
+            'Too many failed login attempts. Please try again later or reset your password.';
+      } else if (e.code == 'network-request-failed') {
+        message = 'Network connection error. Please verify your internet.';
       }
 
       setState(() {
@@ -328,8 +335,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
 
                     // Sign Up Link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text(
                           'New staff member?',

@@ -56,11 +56,11 @@ class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
         branchName: branch.name,
       );
 
+      if (!mounted) return;
+
       setState(() {
         _activeBranchId = branch.id;
       });
-
-      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

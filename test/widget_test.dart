@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vetsync/models/branch.dart';
 import 'package:vetsync/models/pet.dart';
 import 'package:vetsync/models/visit.dart';
+import 'package:vetsync/services/visit_service.dart';
 import 'package:vetsync/screen/forgot_password_screen.dart';
 import 'package:vetsync/screen/branch_selection_screen.dart';
+import 'package:vetsync/screen/login_screen.dart';
+import 'package:vetsync/screen/signup_screen.dart';
 
 void main() {
   testWidgets('ForgotPasswordScreen renders email input and send OTP button',
@@ -116,4 +119,186 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Delhi Central Clinic'), findsOneWidget);
   });
+
+  test('VisitService evaluateSafetyFlags detects overdue follow-ups and <14d medications', () {
+    final visitService = VisitService();
+    final now = DateTime.now();
+
+    final visit1 = Visit(
+      id: 'v1',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      branchName: 'Delhi Central Clinic',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now.subtract(const Duration(days: 5)),
+      notes: 'Initial evaluation',
+      medications: ['Amoxicillin 250mg'],
+      vaccination: 'Rabies',
+      nextFollowUpDate: now.subtract(const Duration(days: 1)), // Overdue
+    );
+
+    final visit2 = Visit(
+      id: 'v2',
+      petId: 'pet1',
+      branchId: 'BRANCH_MUMBAI',
+      branchName: 'Mumbai Pet Specialty Hospital',
+      vetId: 'vet2',
+      vetName: 'Dr. Patel',
+      date: now.subtract(const Duration(days: 20)),
+      notes: 'Old checkup',
+      medications: ['Old Med 50mg'],
+      vaccination: '',
+      nextFollowUpDate: null,
+    );
+
+    final report = visitService.evaluateSafetyFlags([visit1, visit2]);
+
+    expect(report.isFollowUpOverdue, true);
+    expect(report.overdueDate, isNotNull);
+    expect(report.recentMedications.length, 1);
+    expect(report.recentMedications.first.medicationName, 'Amoxicillin 250mg');
+    expect(report.recentMedications.first.branchName, 'Delhi Central Clinic');
+  });
+
+  test('VisitService evaluateSafetyFlags ignores past follow-ups when recent visit schedules a future follow-up', () {
+    final visitService = VisitService();
+    final now = DateTime.now();
+
+    // Pet had a visit today with follow-up scheduled for next week
+    final recentVisit = Visit(
+      id: 'v_recent',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now,
+      notes: 'Routine checkup',
+      medications: [],
+      nextFollowUpDate: now.add(const Duration(days: 7)),
+    );
+
+    // Pet had an older visit 60 days ago with a past follow-up date 50 days ago
+    final historicalVisit = Visit(
+      id: 'v_old',
+      petId: 'pet1',
+      branchId: 'BRANCH_MUMBAI',
+      vetId: 'vet2',
+      vetName: 'Dr. Patel',
+      date: now.subtract(const Duration(days: 60)),
+      notes: 'Historical visit',
+      medications: [],
+      nextFollowUpDate: now.subtract(const Duration(days: 50)),
+    );
+
+    final report = visitService.evaluateSafetyFlags([recentVisit, historicalVisit]);
+
+    // Should NOT be overdue because the latest scheduled follow-up is in the future
+    expect(report.isFollowUpOverdue, false);
+    expect(report.overdueDate, isNull);
+  });
+
+  test('VisitService evaluateSafetyFlags considers follow-up resolved if subsequent visit occurred since follow-up date', () {
+    final visitService = VisitService();
+    final now = DateTime.now();
+
+    // Pet attended a follow-up visit yesterday; no new follow-up needed
+    final followUpVisit = Visit(
+      id: 'v_attended',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now.subtract(const Duration(days: 1)),
+      notes: 'Follow-up attended, all healed',
+      medications: [],
+      nextFollowUpDate: null,
+    );
+
+    // Initial visit 30 days ago that scheduled a follow-up for 10 days ago
+    final initialVisit = Visit(
+      id: 'v_initial',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now.subtract(const Duration(days: 30)),
+      notes: 'Initial issue',
+      medications: [],
+      nextFollowUpDate: now.subtract(const Duration(days: 10)),
+    );
+
+    final report = visitService.evaluateSafetyFlags([followUpVisit, initialVisit]);
+
+    // Should NOT be overdue because a subsequent visit occurred after the scheduled follow-up date
+    expect(report.isFollowUpOverdue, false);
+    expect(report.overdueDate, isNull);
+  });
+
+  test('VisitService evaluateSafetyFlags flags overdue when intermediate visit happened before follow-up date but none since', () {
+    final visitService = VisitService();
+    final now = DateTime.now();
+
+    // Intermediate visit happened 15 days ago (before the 10-day-ago follow-up date)
+    final intermediateVisit = Visit(
+      id: 'v_inter',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now.subtract(const Duration(days: 15)),
+      notes: 'Emergency visit for unrelated issue',
+      medications: [],
+      nextFollowUpDate: null,
+    );
+
+    // Initial visit 30 days ago that scheduled a follow-up for 10 days ago
+    final initialVisit = Visit(
+      id: 'v_initial',
+      petId: 'pet1',
+      branchId: 'BRANCH_DELHI',
+      vetId: 'vet1',
+      vetName: 'Dr. Sharma',
+      date: now.subtract(const Duration(days: 30)),
+      notes: 'Initial issue',
+      medications: [],
+      nextFollowUpDate: now.subtract(const Duration(days: 10)),
+    );
+
+    final report = visitService.evaluateSafetyFlags([intermediateVisit, initialVisit]);
+
+    // Should be overdue because no visit occurred on or after the scheduled follow-up date
+    expect(report.isFollowUpOverdue, true);
+    expect(report.overdueDate, initialVisit.nextFollowUpDate);
+  });
+
+  testWidgets('LoginScreen renders credentials form and sign in CTA',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: LoginScreen(),
+      ),
+    );
+
+    expect(find.text('VetSync'), findsOneWidget);
+    expect(find.text('Staff Medical Portal'), findsOneWidget);
+    expect(find.text('Sign In to VetSync'), findsOneWidget);
+    expect(find.text('Register Account'), findsOneWidget);
+  });
+
+  testWidgets('SignupScreen renders full registration inputs and branch dropdown',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SignupScreen(),
+      ),
+    );
+
+    expect(find.text('Staff Registration'), findsOneWidget);
+    expect(find.text('Create Staff Account'), findsOneWidget);
+    expect(find.text('Create Account'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+  });
 }
+
+

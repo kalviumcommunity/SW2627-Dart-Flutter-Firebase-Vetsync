@@ -33,8 +33,12 @@ class RecentMedicationInfo {
 
 /// Service for managing cross-branch pet visit records and safety flags.
 class VisitService {
-  final CollectionReference _visitsCollection =
-      FirebaseFirestore.instance.collection('visits');
+  final FirebaseFirestore? _customFirestore;
+
+  VisitService({FirebaseFirestore? firestore}) : _customFirestore = firestore;
+
+  CollectionReference get _visitsCollection =>
+      (_customFirestore ?? FirebaseFirestore.instance).collection('visits');
 
   /// Streams visits for a specific pet in real-time, newest visits first.
   Stream<List<Visit>> streamVisitsForPet(String petId) {
@@ -98,14 +102,28 @@ class VisitService {
     bool isOverdue = false;
     DateTime? overdueDate;
 
-    // Check if the most recent follow-up date has passed
-    for (final visit in visits) {
+    // Ensure visits are sorted chronologically descending (newest visit first)
+    final sortedVisits = List<Visit>.from(visits)
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    // Check only the most recent visit that scheduled a follow-up
+    for (final visit in sortedVisits) {
       if (visit.nextFollowUpDate != null) {
         if (visit.nextFollowUpDate!.isBefore(now)) {
-          isOverdue = true;
-          overdueDate = visit.nextFollowUpDate;
-          break; // Found the latest overdue date
+          // Verify whether any subsequent visit has occurred since that follow-up date
+          final hasSubsequentVisit = sortedVisits.any(
+            (v) =>
+                v.date.isAfter(visit.date) &&
+                _isSameDayOrAfter(v.date, visit.nextFollowUpDate!),
+          );
+
+          if (!hasSubsequentVisit) {
+            isOverdue = true;
+            overdueDate = visit.nextFollowUpDate;
+          }
         }
+        // Only evaluate follow-up status on the most recent visit that scheduled a follow-up
+        break;
       }
     }
 
@@ -113,7 +131,7 @@ class VisitService {
     final fourteenDaysAgo = now.subtract(const Duration(days: 14));
     final List<RecentMedicationInfo> recentMeds = [];
 
-    for (final visit in visits) {
+    for (final visit in sortedVisits) {
       if (visit.date.isAfter(fourteenDaysAgo)) {
         for (final med in visit.medications) {
           if (med.trim().isNotEmpty) {
@@ -136,5 +154,12 @@ class VisitService {
       overdueDate: overdueDate,
       recentMedications: recentMeds,
     );
+  }
+
+  /// Helper to check if a date is on the same calendar day or after a target date.
+  static bool _isSameDayOrAfter(DateTime date, DateTime targetDate) {
+    final d = DateTime(date.year, date.month, date.day);
+    final t = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    return !d.isBefore(t);
   }
 }

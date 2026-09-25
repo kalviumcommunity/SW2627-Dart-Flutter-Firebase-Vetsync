@@ -3,8 +3,12 @@ import 'package:vetsync/models/pet.dart';
 
 /// Service for centralized pet operations across all clinic branches.
 class PetService {
-  final CollectionReference _petsCollection =
-      FirebaseFirestore.instance.collection('pets');
+  final FirebaseFirestore? _customFirestore;
+
+  PetService({FirebaseFirestore? firestore}) : _customFirestore = firestore;
+
+  CollectionReference get _petsCollection =>
+      (_customFirestore ?? FirebaseFirestore.instance).collection('pets');
 
   /// Streams all pets in real-time, ordered by most recently added first.
   Stream<List<Pet>> streamAllPets() {
