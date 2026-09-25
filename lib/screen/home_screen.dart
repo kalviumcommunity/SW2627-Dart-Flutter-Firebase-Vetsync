@@ -9,6 +9,7 @@ import 'package:vetsync/screen/pets_screen.dart';
 import 'package:vetsync/services/auth_service.dart';
 import 'package:vetsync/services/branch_service.dart';
 import 'package:vetsync/services/pet_service.dart';
+import 'package:vetsync/services/visit_service.dart';
 import 'package:vetsync/theme/app_colors.dart';
 import 'package:vetsync/theme/app_text_styles.dart';
 import 'package:vetsync/widgets/clinic_badge.dart';
@@ -27,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final BranchService _branchService = BranchService();
   final PetService _petService = PetService();
+  final VisitService _visitService = VisitService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String _getGreeting() {
@@ -312,10 +314,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 v.date.month == now.month &&
                                 v.date.day == now.day).length;
 
-                            // Calculate overdue follow-ups
-                            final overdueFollowUps = allVisits.where((v) =>
-                                v.nextFollowUpDate != null &&
-                                v.nextFollowUpDate!.isBefore(now)).length;
+                            // Calculate overdue follow-ups accurately per patient
+                            final Map<String, List<Visit>> petVisitsMap = {};
+                            for (final visit in allVisits) {
+                              petVisitsMap.putIfAbsent(visit.petId, () => []).add(visit);
+                            }
+                            final overdueFollowUps = petVisitsMap.values.where((visits) {
+                              return _visitService.evaluateSafetyFlags(visits).isFollowUpOverdue;
+                            }).length;
 
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
