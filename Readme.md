@@ -8,6 +8,17 @@
 **VetSync** is a centralized veterinary health-record and clinic synchronization mobile application built with Flutter and Firebase. It provides veterinary clinics with instant, shared access to a pet's complete medical history, vaccination timeline, treatment notes, and automated clinical safety alerts across all clinic branches.
 
 ---
+## Table of Contents
+-> Problem Statement
+-> Key Features
+-> Tech Stack
+-> Project Structure
+-> Getting Started
+-> Documentation
+-> Team
+
+---
+
 
 ## 🏥 Problem Statement
 
