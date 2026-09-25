@@ -1,301 +1,112 @@
-# 🔍 Low-Level Design (LLD) — VetSync
+# VetSync — Low-Level Design (LLD)
 
-**System:** VetSync Centralized Veterinary Health-Record Platform  
-**Document Version:** 2.0  
-**Language / Framework:** Dart 3.12.2 / Flutter 3.44.9  
-**Target:** Engineering, Architecture & Review Teams  
+## 1. Introduction
+This document provides the Low-Level Design (LLD) for VetSync, detailing the architecture, database schema, data models, components, and module interactions based on the PRD and HLD.
 
----
+## 2. System Architecture Overview
+VetSync follows a standard Flutter + Firebase layered architecture.
 
-## 1. Class Diagram & Architecture
+- **Presentation Layer:** Flutter Widgets and Screens (`lib/screen/`).
+- **State Management Layer:** Uses Flutter `StreamBuilder` for real-time reactivity and core state management.
+- **Service/Repository Layer:** Handles communication with Firebase Auth and Firestore (`lib/repositories/`).
+- **Data Model Layer:** Dart classes mapping to Firestore documents (`lib/models/`).
 
-```mermaid
-classDiagram
-    class Pet {
-        +String id
-        +String name
-        +String species
-        +String breed
-        +int age
-        +String ownerName
-        +String gender
-        +String branchId
-        +String branchName
-        +DateTime createdAt
-        +fromFirestore(DocumentSnapshot doc) Pet
-        +toMap() Map~String, dynamic~
-    }
+## 3. Database Schema (Firestore)
 
-    class Visit {
-        +String id
-        +String petId
-        +String branchId
-        +String branchName
-        +String vetId
-        +String vetName
-        +DateTime date
-        +String notes
-        +List~String~ medications
-        +String vaccination
-        +DateTime nextFollowUpDate
-        +fromFirestore(DocumentSnapshot doc) Visit
-        +toMap() Map~String, dynamic~
-    }
+### `pets` Collection
+Stores core details about the pet, shared across all clinic branches.
+- `petId` (String) - Document ID
+- `name` (String) - Pet's name
+- `species` (String) - e.g., Dog, Cat
+- `breed` (String) - Breed of the pet
+- `ownerName` (String) - Name of the pet owner
+- `dob` (Timestamp) - Date of birth
 
-    class Branch {
-        +String id
-        +String name
-        +String city
-        +String address
-        +String phone
-        +String operatingHours
-        +bool isMainBranch
-        +static List~Branch~ defaultBranches
-        +fromFirestore(DocumentSnapshot doc) Branch
-        +fromMap(Map~String, dynamic~ map) Branch
-        +toMap() Map~String, dynamic~
-    }
+### `visits` Collection
+Stores individual visit records tied to a pet and branch.
+- `visitId` (String) - Document ID
+- `petId` (String) - Reference to `pets` document
+- `branchId` (String) - Reference to `branches` document
+- `vetId` (String) - Reference to `vets` document
+- `date` (Timestamp) - Visit date and time
+- `notes` (String) - Clinical notes
+- `medications` (Array<String>) - List of administered or prescribed medications
+- `vaccination` (String) - Name of vaccination administered (if any)
+- `nextFollowUpDate` (Timestamp) - Scheduled date for the next follow-up
 
-    class SafetyReport {
-        +bool isFollowUpOverdue
-        +DateTime overdueDate
-        +List~RecentMedicationInfo~ recentMedications
-    }
+### `branches` Collection
+Stores clinic branch locations.
+- `branchId` (String) - Document ID
+- `name` (String) - Branch name (e.g., Downtown Clinic)
+- `location` (String) - Physical address or location details
 
-    class RecentMedicationInfo {
-        +String medicationName
-        +DateTime prescribedDate
-        +String branchId
-        +String branchName
-        +String vetName
-    }
+### `vets` Collection
+Stores veterinarian details.
+- `vetId` (String) - Document ID (Matches Firebase Auth UID)
+- `name` (String) - Veterinarian's full name
+- `branchId` (String) - Primary branch assignment
 
-    class AuthService {
-        +Stream~User~ authStateChanges
-        +User currentUser
-        +signUpWithEmail(email, password) Future~UserCredential~
-        +signInWithEmail(email, password) Future~UserCredential~
-        +sendPasswordResetOtp(email) Future~OtpResult~
-        +verifyPasswordResetOtp(email, otp) Future~OtpResult~
-        +resetPasswordWithOtp(email, newPassword, resetToken) Future~OtpResult~
-        +signOut() Future~void~
-    }
+## 4. Class Diagrams / Data Models (Dart)
 
-    class PetService {
-        +streamAllPets() Stream~List~Pet~~
-        +streamPetsByBranch(branchId) Stream~List~Pet~~
-        +addPet(name, species, breed, age, ownerName, gender, branchId, branchName) Future~String~
-        +getPetById(petId) Future~Pet~
-    }
-
-    class VisitService {
-        +streamVisitsForPet(petId) Stream~List~Visit~~
-        +addVisit(petId, branchId, branchName, vetId, vetName, notes, medications, vaccination, visitDate, nextFollowUpDate) Future~String~
-        +evaluateSafetyFlags(visits) SafetyReport
-    }
-
-    class BranchService {
-        +streamBranches() Stream~List~Branch~~
-        +getBranches() Future~List~Branch~~
-        +getBranchByIdSync(branchId) Branch
-        +updateCurrentVetBranch(branchId, branchName) Future~void~
-    }
-
-    class OtpService {
-        +sendOtpToEmail(email) Future~OtpResult~
-        +verifyOtp(email, otp) Future~OtpResult~
-        +resetPassword(email, newPassword, resetToken) Future~OtpResult~
-        +generateOtp() String
-    }
-
-    PetService --> Pet
-    VisitService --> Visit
-    VisitService --> SafetyReport
-    SafetyReport --> RecentMedicationInfo
-    BranchService --> Branch
-    AuthService --> OtpService
-```
-
----
-
-## 2. Detailed Data Models
-
-### 2.1 `Pet` Model (`lib/models/pet.dart`)
+### `Pet` Model
 ```dart
 class Pet {
-  final String id;
+  final String petId;
   final String name;
   final String species;
   final String breed;
-  final int age;
   final String ownerName;
-  final String gender;
-  final String branchId;
-  final String branchName;
-  final DateTime? createdAt;
-
-  const Pet({
-    required this.id,
-    required this.name,
-    required this.species,
-    required this.breed,
-    required this.age,
-    required this.ownerName,
-    this.gender = 'Unknown',
-    this.branchId = 'BRANCH_DELHI',
-    this.branchName = 'Delhi Central Clinic',
-    this.createdAt,
-  });
-
-  factory Pet.fromFirestore(DocumentSnapshot doc);
-  Map<String, dynamic> toMap();
+  final DateTime dob;
+  
+  // fromMap() and toMap() methods for Firestore
 }
 ```
 
-### 2.2 `Visit` Model (`lib/models/visit.dart`)
+### `Visit` Model
 ```dart
 class Visit {
-  final String id;
+  final String visitId;
   final String petId;
   final String branchId;
-  final String branchName;
   final String vetId;
-  final String vetName;
   final DateTime date;
   final String notes;
   final List<String> medications;
   final String vaccination;
   final DateTime? nextFollowUpDate;
 
-  const Visit({
-    required this.id,
-    required this.petId,
-    required this.branchId,
-    this.branchName = '',
-    required this.vetId,
-    required this.vetName,
-    required this.date,
-    required this.notes,
-    required this.medications,
-    this.vaccination = '',
-    this.nextFollowUpDate,
-  });
-
-  factory Visit.fromFirestore(DocumentSnapshot doc);
-  Map<String, dynamic> toMap();
+  // fromMap() and toMap() methods for Firestore
 }
 ```
 
-### 2.3 `Branch` Model (`lib/models/branch.dart`)
-```dart
-class Branch {
-  final String id;
-  final String name;
-  final String city;
-  final String address;
-  final String phone;
-  final String operatingHours;
-  final bool isMainBranch;
+## 5. UI & Widget Tree
 
-  static const List<Branch> defaultBranches = [...]; // 7 Regional Clinics
-}
-```
+### Screen Structure
+1. **LoginScreen:** Authenticates vet using `FirebaseAuth.instance.signInWithEmailAndPassword`.
+2. **SearchScreen:** Top-level screen post-login. Contains a `TextField` for search input and a `ListView` mapping to a `pets` query.
+3. **PetDetailScreen:** Displays pet info and a `StreamBuilder` listening to `visits` where `petId == currentPet.id`.
+4. **AddVisitScreen:** Form with `TextFormField`s and `DatePicker` for logging a new visit. Calls `FirestoreService.addVisit()`.
 
----
+## 6. Business Logic & Flags
 
-## 3. Services API Specification
+### Overdue Follow-up Flag
+Computed locally in the app:
+- Iterate over the pet's past visits to find the most recent `nextFollowUpDate`.
+- If `nextFollowUpDate < DateTime.now()`, display an overdue warning banner.
 
-### 3.1 `VisitService.evaluateSafetyFlags(List<Visit> visits)`
-```dart
-SafetyReport evaluateSafetyFlags(List<Visit> visits) {
-  if (visits.isEmpty) {
-    return const SafetyReport(isFollowUpOverdue: false, recentMedications: []);
-  }
+### Recent Medication Flag
+- Filter `visits` from the past N days.
+- If `medications` array is non-empty, display recent medications given to prevent duplicates.
 
-  final now = DateTime.now();
-  bool isOverdue = false;
-  DateTime? overdueDate;
-
-  // Ensure visits are sorted chronologically descending (newest visit first)
-  final sortedVisits = List<Visit>.from(visits)
-    ..sort((a, b) => b.date.compareTo(a.date));
-
-  // Check only the most recent visit that scheduled a follow-up
-  for (final visit in sortedVisits) {
-    if (visit.nextFollowUpDate != null) {
-      if (visit.nextFollowUpDate!.isBefore(now)) {
-        // Verify whether subsequent visits have occurred since that follow-up date
-        final hasSubsequentVisit = sortedVisits.any(
-          (v) =>
-              v.date.isAfter(visit.date) &&
-              _isSameDayOrAfter(v.date, visit.nextFollowUpDate!),
-        );
-
-        if (!hasSubsequentVisit) {
-          isOverdue = true;
-          overdueDate = visit.nextFollowUpDate;
-        }
-      }
-      break;
+## 7. Security Rules (Firestore)
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      // Base rule: Must be authenticated
+      allow read, write: if request.auth != null;
     }
   }
-
-  final fourteenDaysAgo = now.subtract(const Duration(days: 14));
-  final List<RecentMedicationInfo> recentMeds = [];
-
-  for (final visit in visits) {
-    if (visit.date.isAfter(fourteenDaysAgo)) {
-      for (final med in visit.medications) {
-        if (med.trim().isNotEmpty) {
-          recentMeds.add(RecentMedicationInfo(
-            medicationName: med.trim(),
-            prescribedDate: visit.date,
-            branchId: visit.branchId,
-            branchName: visit.branchName,
-            vetName: visit.vetName,
-          ));
-        }
-      }
-    }
-  }
-
-  return SafetyReport(
-    isFollowUpOverdue: isOverdue,
-    overdueDate: overdueDate,
-    recentMedications: recentMeds,
-  );
 }
 ```
-
-### 3.2 `OtpService`
-- **`sendOtpToEmail(String email)`**: Generates 6-digit code, saves in-memory with 10-minute expiration, sends via Brevo HTTP POST.
-- **`verifyOtp(String email, String otp)`**: Validates user PIN, generates 15-minute reset token.
-- **`resetPassword(String email, String newPassword, String resetToken)`**: Updates password securely and invalidates session token.
-
----
-
-## 4. UI Screen Hierarchy
-
-```
-MaterialApp
- └── AuthWrapper (StreamBuilder<User?>)
-      ├── Unauthenticated: LoginScreen
-      │    ├── SignupScreen
-      │    └── ForgotPasswordScreen (3-step OTP Flow)
-      └── Authenticated: MainNavigationScreen (4-Tab IndexedStack)
-           ├── Tab 0: HomeScreen (Metrics & Recent Cross-Branch Activity)
-           ├── Tab 1: PetsScreen (Patient Directory & Branch Chips)
-           ├── Tab 2: AlertsScreen (Safety Flags & Overdue Follow-ups)
-           └── Tab 3: ProfileScreen (Doctor Station & Logout)
-```
-
----
-
-## 5. Test Suite Specification
-
-| Test File | Target | Coverage |
-| :--- | :--- | :--- |
-| `otp_service_test.dart` | `OtpService` | PIN format, verification failures, expiration |
-| `widget_test.dart` | `Branch`, `Pet`, `Visit` | Serialization, branch retention, metadata |
-| `widget_test.dart` | `BranchSelectionScreen` | Search filtering, city filter chips |
-| `widget_test.dart` | `ForgotPasswordScreen` | Email step, OTP input rendering |
