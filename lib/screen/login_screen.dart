@@ -39,10 +39,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.signInWithEmail(
+      final credential = await _authService.signInWithEmail(
         email: _emailController.text,
         password: _passwordController.text,
       );
+
+      final user = credential.user;
+      if (user != null) {
+        // Verify that this account is a registered veterinarian in Firestore
+        final isRegistered = await _authService.isVetRegistered(user.uid);
+        if (!isRegistered) {
+          await _authService.signOut();
+          if (!mounted) return;
+          setState(() {
+            _errorMessage =
+                'No registered veterinary staff profile found for this account. Please create an account via Staff Registration first.';
+          });
+          return;
+        }
+      }
       // AuthWrapper StreamBuilder automatically redirects to MainNavigationScreen
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
