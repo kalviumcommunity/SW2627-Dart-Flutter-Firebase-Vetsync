@@ -113,7 +113,9 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
 
-      Navigator.pop(context);
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 

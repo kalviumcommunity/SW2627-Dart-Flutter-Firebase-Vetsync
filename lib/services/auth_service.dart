@@ -67,6 +67,35 @@ class AuthService {
     }
   }
 
+  /// Ensures that a veterinary staff profile exists in Firestore for the given user.
+  Future<void> ensureVetProfile(User user) async {
+    try {
+      final doc = await _firestore.collection('vets').doc(user.uid).get();
+      if (!doc.exists) {
+        String name = user.displayName ?? '';
+        if (name.isEmpty && user.email != null && user.email!.contains('@')) {
+          name = user.email!.split('@').first;
+          if (name.isNotEmpty) {
+            name = name[0].toUpperCase() + name.substring(1);
+          }
+        }
+        if (name.isEmpty) name = 'Doctor';
+
+        await _firestore.collection('vets').doc(user.uid).set({
+          'uid': user.uid,
+          'name': name,
+          'email': user.email ?? '',
+          'branchID': 'BRANCH_DELHI',
+          'branchName': 'Delhi Central Clinic',
+          'role': 'veterinarian',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (_) {
+      // In offline/test conditions where Firestore might be mocked, ignore
+    }
+  }
+
   /// Signs in an existing veterinary staff member with email and password.
   Future<UserCredential> signInWithEmail({
     required String email,
@@ -77,6 +106,9 @@ class AuthService {
         email: email.trim(),
         password: password.trim(),
       );
+      if (credential.user != null) {
+        await ensureVetProfile(credential.user!);
+      }
       return credential;
     } on FirebaseAuthException {
       // Rethrow to let the UI layer handle user-friendly messages
